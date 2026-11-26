@@ -19,6 +19,15 @@ fn kill_backend(app: &AppHandle) {
     if let Some(child) = app.state::<Backend>().0.lock().unwrap().take() {
         let _ = child.kill();
     }
+    // PyInstaller starter en barneprosess som kan bli igjen og låse nexus-backend.exe. Ta hele prosesstreet.
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/T", "/IM", "nexus-backend.exe"])
+            .creation_flags(0x0800_0000)
+            .status();
+    }
 }
 
 async fn check_update(app: AppHandle) {

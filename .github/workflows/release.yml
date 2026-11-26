@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Nytt i 0.7.0: Memory-siden (langtidsminne du kan se, endre, feste og slette; agenten kan huske ting med verktøyet remember) og Workspace-siden (bla i mappene agenten har tilgang til og forhåndsvis filer)."
+          releaseBody: "0.7.1: Fikser installasjonsfeil (låst nexus-backend.exe). Installeren og oppdateringen avslutter nå kjørende NEXUS-prosesser før filer skrives. Inneholder også Memory og Workspace fra 0.7.0."
           releaseDraft: false
           prerelease: false
