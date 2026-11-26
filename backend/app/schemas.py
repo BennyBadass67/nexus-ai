@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[int] = None
     regenerate: bool = False
     project_id: Optional[int] = None
+    images: Optional[list[str]] = None
 
 
 class RenameRequest(BaseModel):

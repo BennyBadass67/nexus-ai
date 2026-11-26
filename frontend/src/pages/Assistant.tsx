@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2, Cloud, FolderKanban, Settings2 } from "lucide-react";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2, Cloud, ImagePlus, X, FolderKanban, Settings2 } from "lucide-react";
 import { api, Conv, extrasApi, Msg, Project, projectsApi, smartApi, Step, streamAgent, streamChat, Tpl } from "../api";
 import Steps from "../components/Steps";
 import { useApp } from "../store";
@@ -37,6 +37,21 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const [sugg, setSugg] = useState<string[]>([]); const [suggBusy, setSuggBusy] = useState(false);
   const [tpls, setTpls] = useState<Tpl[]>([]); const [tplOpen, setTplOpen] = useState(false);
   const fileIn = useRef<HTMLInputElement>(null);
+  const imgIn = useRef<HTMLInputElement>(null);
+  const [pics, setPics] = useState<string[]>([]);   // data-URLer (JPEG, maks 1280 px) som venter på å sendes
+  const addPic = (f: File) => new Promise<void>((res) => {
+    if (!f.type.startsWith("image/")) { setErr(`${f.name} er ikke et bilde.`); return res(); }
+    if (pics.length >= 3) { setErr("Maks 3 bilder per melding."); return res(); }
+    const img = new Image(); const url = URL.createObjectURL(f);
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height)); const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const x = c.getContext("2d")!; x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      setErr(""); setPics((p) => [...p, c.toDataURL("image/jpeg", 0.85)]); URL.revokeObjectURL(url); res();
+    };
+    img.onerror = () => { setErr(`Kunne ikke lese ${f.name}.`); URL.revokeObjectURL(url); res(); };
+    img.src = url;
+  });
   const attach = async (f: File) => {
     if (f.size > 120_000) { setErr(`${f.name} er for stor (maks 120 kB tekst). Bruk Kunnskap under Workspace for store filer.`); return; }
     const t = await f.text();
@@ -66,11 +81,12 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   };
   const fresh = () => { if (!busy) { setCid(null); setMsgs([]); setErr(""); area.current?.focus(); } };
 
-  const run = async (message: string, regenerate = false) => {
+  const run = async (message: string, regenerate = false, imgs: string[] = []) => {
     if (!model) { setErr("Ingen modell valgt. Last ned en under Models."); return; }
+    if (imgs.length && agentMode) { setErr("Bilder virker i vanlig chat. Slå av agent-modus først."); return; }
     setErr(""); setNotice(""); setSugg([]); setBusy(true); stick.current = true; runId.current = null;
     setMsgs((m) => {
-      const base = regenerate && m[m.length - 1]?.role === "assistant" ? m.slice(0, -1) : [...m, { role: "user" as const, content: message }];
+      const base = regenerate && m[m.length - 1]?.role === "assistant" ? m.slice(0, -1) : [...m, { role: "user" as const, content: message, ...(imgs.length ? { imgs } : {}) }];
       return [...base, { role: "assistant", content: "", model }];
     });
     abort.current = new AbortController();
@@ -88,8 +104,8 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
         else if (e.type === "error") setErr(e.message);
       };
       if (agentMode && !regenerate) await streamAgent({ message, model, conversation_id: cid, project_id: cid ? undefined : proj }, handler, abort.current.signal);
-      else await streamChat({ message, model, conversation_id: cid, regenerate, project_id: cid ? undefined : proj }, handler, abort.current.signal);
-    } catch (e: any) { if (e.name !== "AbortError") setErr(String(e.message || e)); }
+      else await streamChat({ message, model, conversation_id: cid, regenerate, project_id: cid ? undefined : proj, images: imgs.length ? imgs : undefined }, handler, abort.current.signal);
+    } catch (e: any) { if (e.name !== "AbortError") setErr(String(e.message || e).replace(/^\d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); }
     finally {
       if (tokTimer.current) clearTimeout(tokTimer.current); flushTok();
       setBusy(false); loadList(); loadProjs(); refresh();
@@ -97,7 +113,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
       if (id && cid === null && !regenerate) smartApi.autotitle(id, model).then((r) => { if (r.changed) loadList(); }).catch(() => {});
     }
   };
-  const send = () => { const t = text.trim(); if (!t || busy) return; setText(""); run(t); };
+  const send = () => { const t = text.trim() || (pics.length ? "Beskriv bildet." : ""); if (!t || busy) return; const im = pics; setText(""); setPics([]); run(t, false, im); };
   const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.content;
 
   const noModel = models?.online && models.models.length === 0;
@@ -160,7 +176,8 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
               return m.role === "user" ? (
                 <div key={i} className="flex animate-rise justify-end">
                   <div className="max-w-[80%] whitespace-pre-wrap rounded-[22px] rounded-br-md px-4 py-3 text-[15px] leading-relaxed shadow-lg"
-                    style={{ background: "linear-gradient(135deg, rgb(var(--accent) / .38), rgb(var(--accent2) / .3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>{m.content}</div>
+                    style={{ background: "linear-gradient(135deg, rgb(var(--accent) / .38), rgb(var(--accent2) / .3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>
+                    {m.imgs && <div className="mb-2 flex flex-wrap gap-2">{m.imgs.map((u, k) => <img key={k} src={u} alt="Vedlagt bilde" className="max-h-40 rounded-xl" />)}</div>}{m.content}</div>
                 </div>
               ) : (
                 <div key={i} className="group flex animate-rise gap-3">
@@ -184,11 +201,16 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
         {sugg.length > 0 && !busy && <div className="mx-6 mb-2 flex flex-wrap gap-2">{sugg.map((s, i) => <button key={s} onClick={() => { setSugg([]); run(s); }} className="animate-pop rounded-full glass-soft px-3.5 py-1.5 text-sm transition hover:-translate-y-0.5 hover:bg-white/15 active:scale-95" style={{ animationDelay: `${i * 70}ms` }}>{s}</button>)}</div>}
         {err && <div className="mx-6 mb-2 animate-pop rounded-xl bg-rose-500/12 px-4 py-2.5 text-sm text-rose-200 ring-1 ring-rose-400/20">{err}</div>}
         <div className="px-6 pb-5">
+          {pics.length > 0 && <div className="mx-auto mb-2 flex max-w-3xl gap-2">{pics.map((u, k) => (
+            <div key={k} className="group relative animate-pop"><img src={u} alt="Bilde som skal sendes" className="h-16 w-16 rounded-xl object-cover" />
+              <button title="Fjern bildet" aria-label="Fjern bildet" onClick={() => setPics((p) => p.filter((_, j) => j !== k))} className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/70 text-white"><X size={11} /></button></div>))}</div>}
           <div className="glass-soft mx-auto flex max-w-3xl items-end gap-2 rounded-[22px] p-2 pl-4 transition focus-within:ring-1 focus-within:ring-nx-blue/50">
             <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={`Skriv til ${prefs.agent_name}…`} autoFocus
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               className="max-h-44 min-h-[40px] flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-white/30" />
             <input ref={fileIn} type="file" className="hidden" accept=".txt,.md,.csv,.json,.py,.js,.ts,.tsx,.html,.css,.log,.yaml,.yml,.xml,.sql,.java,.c,.cpp,.cs,.go,.rs" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) attach(f); }} />
+            <input ref={imgIn} type="file" multiple className="hidden" accept="image/png,image/jpeg,image/webp,image/gif" onChange={async (e) => { for (const f of Array.from(e.target.files ?? [])) await addPic(f); e.target.value = ""; }} />
+            <button onClick={() => imgIn.current?.click()} title="Legg ved bilde (krever synsmodell, f.eks. moondream)" aria-label="Legg ved bilde" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><ImagePlus size={16} /></button>
             <button onClick={() => fileIn.current?.click()} title="Legg ved tekstfil" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><Paperclip size={16} /></button>
             <div className="relative">
               <button onClick={() => { setTplOpen((v) => !v); extrasApi.templates().then(setTpls).catch(() => {}); }} title="Maler" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><FileText size={16} /></button>

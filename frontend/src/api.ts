@@ -4,7 +4,7 @@ export type ModelsResp = { online: boolean; error?: string; models: ModelInfo[] 
 export type Conv = { id: number; title: string; model: string | null; updated_at: number; project_id?: number | null };
 export type Project = { id: number; name: string; instructions: string; chats: number };
 export type Step = { call_id: string; tool: string; describe: string; risk: string; status: "running" | "waiting" | "ok" | "error" | "denied"; result?: string };
-export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number; steps?: Step[] };
+export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number; steps?: Step[]; imgs?: string[] };
 export type ConvFull = { id: number; title: string; model: string | null; messages: Msg[] };
 
 export async function j<T>(url: string, init?: RequestInit): Promise<T> {
@@ -100,7 +100,7 @@ export type ChatEvent =
   | { type: "done" };
 
 /** Leser NDJSON-strømmen fra /api/chat og kaller onEvent for hver hendelse. */
-export const streamChat = (body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean; project_id?: number | null },
+export const streamChat = (body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean; project_id?: number | null; images?: string[] },
   onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/chat", body, onEvent, signal);
 export const streamAgent = (body: { message: string; model: string; conversation_id?: number | null; text_mode?: boolean; project_id?: number | null },
   onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/agent/run", body, onEvent, signal);

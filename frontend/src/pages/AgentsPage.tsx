@@ -212,7 +212,7 @@ function Builder({ done }: { done: () => void }) {
               <span className="h-1.5 w-28 overflow-hidden rounded-full bg-white/40"><span className="block h-full rounded-full bg-nx-blue transition-all" style={{ width: `${pct(designer.model)}%` }} /></span>
               <button className="underline" onClick={() => cancelPull(designer.model)}>Avbryt</button></span>)
             : <button className="btn-ghost ml-auto !py-1 text-xs" onClick={() => { localStorage.removeItem("nexus.designer.skip"); pull(designer.model); }}>Last ned ({designer.size_gb} GB)</button>}
-          {pulls[designer.model]?.error && <span className="w-full text-xs text-rose-700">Nedlasting feilet: {pulls[designer.model].error}</span>}
+          {pulls[designer.model]?.error && <span className="w-full text-xs text-rose-300">Nedlasting feilet: {pulls[designer.model].error}</span>}
         </div>)}
       <textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={1500} placeholder="F.eks. «et team som hjelper meg med lekser»"
         className="mt-4 min-h-[90px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-nx-blue/60" />

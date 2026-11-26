@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import projects, agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
+from . import vision, projects, agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
@@ -125,6 +125,7 @@ def _ev(**kw) -> bytes:
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     """Strømmer svar som NDJSON: meta, token*, done | error."""
+    imgs = vision.check(req.model, req.images)
     with db.conn() as c:
         cid = req.conversation_id
         if cid is None:
@@ -140,11 +141,13 @@ async def chat(req: ChatRequest):
                 c.execute("DELETE FROM messages WHERE id=?", (last["id"],))
         else:
             c.execute("INSERT INTO messages(conversation_id,role,content,created_at) VALUES(?,?,?,?)",
-                      (cid, "user", req.message, db.now()))
+                      (cid, "user", (f"🖼 [{len(imgs)} bilde(r) vedlagt]\n" if imgs else "") + req.message, db.now()))
         hist = c.execute("SELECT role,content FROM messages WHERE conversation_id=? "
                          "ORDER BY id DESC LIMIT ?", (cid, HISTORY_LIMIT)).fetchall()
     messages = [{"role": "system", "content": build_system_prompt(get_prefs(), cid)}] + \
                [dict(r) for r in reversed(hist)]
+    if imgs and not req.regenerate:
+        messages[-1] = {**messages[-1], "content": req.message, "images": imgs}
 
     async def gen():
         yield _ev(type="meta", conversation_id=cid, model=req.model, provider=("cloud" if cloud.is_cloud(req.model) else "ollama"))

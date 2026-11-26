@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.6.0: I dag-oversikt på Home (oppgaver, øvingskort, sky-kvote, fortsett samtale)."
+          releaseBody: "1.7.0: Bildevedlegg i chat med lokal synsmodell (f.eks. moondream)."
           releaseDraft: false
           prerelease: false
