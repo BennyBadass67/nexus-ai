@@ -12,6 +12,19 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  ; Egen .ico-fil i installasjonsmappa, og snarveiene peker direkte på den (for docker/launchere som leser snarveiens ikon).
+  IfFileExists "$INSTDIR\nexus-ai.ico" +2 0
+  CopyFiles /SILENT "$INSTDIR\resources\nexus-ai.ico" "$INSTDIR\nexus-ai.ico"
+  IfFileExists "$DESKTOP\NEXUS AI.lnk" 0 +2
+  CreateShortCut "$DESKTOP\NEXUS AI.lnk" "$INSTDIR\nexus-ai.exe" "" "$INSTDIR\nexus-ai.ico" 0
+  IfFileExists "$SMPROGRAMS\NEXUS AI.lnk" 0 +2
+  CreateShortCut "$SMPROGRAMS\NEXUS AI.lnk" "$INSTDIR\nexus-ai.exe" "" "$INSTDIR\nexus-ai.ico" 0
+  IfFileExists "$SMPROGRAMS\NEXUS AI\NEXUS AI.lnk" 0 +2
+  CreateShortCut "$SMPROGRAMS\NEXUS AI\NEXUS AI.lnk" "$INSTDIR\nexus-ai.exe" "" "$INSTDIR\nexus-ai.ico" 0
+  FileOpen $1 "$TEMP\nexus-installer-hook.log" a
+  FileSeek $1 0 END
+  FileWrite $1 "POSTINSTALL: snarveier peker til $INSTDIR\nexus-ai.ico (finnes: $\"$INSTDIR\nexus-ai.ico$\")$\r$\n"
+  FileClose $1
   ; Tøm Windows sin ikon-cache og si fra til Utforsker (SHCNE_ASSOCCHANGED), så oppgavelinje og snarveier får det nye ikonet.
   nsExec::Exec '"$SYSDIR\ie4uinit.exe" -ClearIconCache'
   Pop $0

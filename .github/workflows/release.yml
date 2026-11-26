@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.6: Modellbibliotek med hele Ollama-registeret (live fra ollama.com), kategorier (koding, bilder, verktøy, resonnering, liten m.fl.), Passer PC-en min og Ollama sine beskrivelser. Installert-fanen spør Ollama direkte hver gang."
+          releaseBody: "0.7.7: Bygg team med assistenten (Agenter > Bygg team): beskriv ideen, få foreslåtte agenter, rediger og opprett. Ikon: egen nexus-ai.ico i installasjonsmappa og snarveiene peker direkte på den (for dock-apper)."
           releaseDraft: false
           prerelease: false
