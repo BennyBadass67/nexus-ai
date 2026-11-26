@@ -298,6 +298,33 @@ def web_search(a: dict) -> str:
     return "\n\n".join(f"{i+1}. {x['title']}\n{x['url']}\n{x['snippet']}" for i, x in enumerate(res))
 
 
+def add_note_tool(a: dict) -> str:
+    from . import extras
+    from fastapi import HTTPException
+    try:
+        r = extras.add_note(str(a.get("text", "")), str(a["due"]) if a.get("due") else None, "agent")
+    except HTTPException as e:
+        raise ToolError(str(e.detail))
+    return "Notatet fantes allerede" if r["duplicate"] else "Notat lagret (brukeren ser det på Notater-siden)"
+
+
+def list_notes_tool(_: dict) -> str:
+    from . import extras
+    rows = extras.list_notes(include_done=False)
+    return "\n".join(f"- {n['text']}" + (f" (frist {n['due']})" if n["due"] else "") for n in rows) or "Ingen åpne notater"
+
+
+def search_knowledge(a: dict) -> str:
+    from . import extras
+    q = str(a.get("query", "")).strip()
+    if len(q) < 2:
+        raise ToolError("Søkeord må ha minst 2 tegn")
+    hits = extras.knowledge_search(q, 4)
+    if not hits:
+        return "Ingen treff i kunnskapsbasen. Be brukeren trykke Indekser under Workspace > Kunnskap hvis mappene ikke er indeksert."
+    return "\n\n".join(f"[{h['path']}]\n{h['text'][:700]}" for h in hits)
+
+
 # ---------- skjermstyring (fase 3) ----------
 
 def _scr(name: str) -> Callable[[dict], str]:
@@ -354,6 +381,10 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool("open_app", "Åpner et kjent program: " + ", ".join(sorted(set(APPS))) + ".", {"name": (S, "Programnavn", True)}, "open", open_app),
     Tool("remember", "Lagrer et kort faktum, en preferanse eller en beslutning om brukeren i langtidsminnet. Bruk bare når brukeren ber om det eller sier noe varig viktig.",
          {"text": (S, "Det som skal huskes, en kort setning", True), "kind": (S, "fact, preference, decision eller project", False)}, "memory", remember),
+    Tool("add_note", "Lagrer et notat eller en oppgave i brukerens notatliste. Bruk når brukeren ber deg notere noe eller minne om noe.",
+         {"text": (S, "Notatet, én kort setning", True), "due": (S, "Valgfri frist, f.eks. 2026-12-01", False)}, "memory", add_note_tool),
+    Tool("list_notes", "Viser brukerens åpne notater og oppgaver.", {}, "read", list_notes_tool),
+    Tool("search_knowledge", "Søker i brukerens indekserte dokumenter (lokalt) og gir relevante utdrag med filsti.", {"query": (S, "Søkeord eller spørsmål", True)}, "read", search_knowledge),
     Tool("write_file", "Skriver en tekstfil. Krever brukerens godkjenning.",
          {"path": (S, "Filsti", True), "content": (S, "Innhold", True), "overwrite": ("boolean", "Erstatt hvis den finnes", False)}, "write", write_file),
     Tool("delete_path", "Flytter en fil eller mappe til papirkurven. Krever brukerens godkjenning.", {"path": (S, "Sti", True)}, "delete", delete_path),
@@ -381,6 +412,7 @@ def describe(name: str, args: dict) -> str:
             "open_app": f"Åpne programmet {a.get('name')}", "open_url": f"Åpne {a.get('url')} i nettleseren",
             "open_path": f"Åpne {a.get('path')}", "list_dir": f"Liste mappen {a.get('path')}",
             "read_file": f"Lese filen {a.get('path')}", "search_files": f"Søke etter «{a.get('query')}»",
+            "add_note": f"Notere: {str(a.get('text', ''))[:80]}", "list_notes": "Lese notatlisten", "search_knowledge": f"Søke i dokumentene dine etter «{a.get('query')}»",
             "remember": f"Huske: {str(a.get('text', ''))[:80]}", "web_search": f"Søke på nettet etter «{a.get('query')}»", "fetch_url": f"Lese siden {a.get('url')}"}.get(name, name)
 
 
