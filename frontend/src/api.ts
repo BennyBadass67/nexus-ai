@@ -21,7 +21,11 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light"; accent: string; aurora: "on" | "off"; reply_lang: string };
+
 export const api = {
+  prefs: () => j<Prefs>("/api/settings"),
+  savePrefs: (p: Partial<Prefs>) => j<Prefs>("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) }),
   recommendations: () => j<{ ok: boolean; error?: string; hardware: HW; topics: Topic[] }>("/api/recommendations"),
   system: (refresh = false) => j<HW>(`/api/system?refresh=${refresh}`),
   benchmarks: () => j<Record<string, Bench & { at: number }>>("/api/benchmark"),

@@ -21,6 +21,29 @@ SYSTEM_PROMPT = (
 )
 HISTORY_LIMIT = 30
 
+PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
+                 "accent": "#5aa9ff", "aurora": "on", "reply_lang": "auto"}
+PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light"}, "aurora": {"on", "off"}}
+
+
+def get_prefs() -> dict:
+    out = dict(PREF_DEFAULTS)
+    with db.conn() as c:
+        for r in c.execute("SELECT key,value FROM settings WHERE key LIKE 'pref:%'").fetchall():
+            k = r["key"][5:]
+            if k in out:
+                out[k] = r["value"]
+    return out
+
+
+def build_system_prompt(p: dict) -> str:
+    base = (f"Du er {p['agent_name']}, en personlig KI-assistent som kjører lokalt på brukerens PC. "
+            f"Brukeren heter {p['user_name']}. Svar på samme språk som brukeren, kort og presist.")
+    if p.get("persona", "").strip():
+        base += "\n\nPersonlighet og egne instruksjoner fra brukeren:\n" + p["persona"].strip()
+    return base
+
 
 @app.get("/api/health")
 async def health():
@@ -103,7 +126,7 @@ async def chat(req: ChatRequest):
                       (cid, "user", req.message, db.now()))
         hist = c.execute("SELECT role,content FROM messages WHERE conversation_id=? "
                          "ORDER BY id DESC LIMIT ?", (cid, HISTORY_LIMIT)).fetchall()
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + \
+    messages = [{"role": "system", "content": build_system_prompt(get_prefs())}] + \
                [dict(r) for r in reversed(hist)]
 
     async def gen():
@@ -169,6 +192,30 @@ async def benchmark(req: BenchRequest):
         c.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",
                   (f"bench:{req.model}", json.dumps({**r, "at": db.now()})))
     return r
+
+
+@app.get("/api/settings")
+def read_settings():
+    return get_prefs()
+
+
+@app.put("/api/settings")
+def write_settings(body: dict):
+    for k, v in body.items():
+        if k not in PREF_DEFAULTS:
+            raise HTTPException(422, f"Ukjent innstilling: {k}")
+        v = str(v)
+        if k in PREF_CHOICES and v not in PREF_CHOICES[k]:
+            raise HTTPException(422, f"Ugyldig verdi for {k}")
+        if k == "accent" and not re.fullmatch(r"#[0-9a-fA-F]{6}", v):
+            raise HTTPException(422, "Aksentfarge må være #rrggbb")
+        if len(v) > PREF_LIMITS.get(k, 50):
+            raise HTTPException(422, f"{k} er for lang")
+        if k == "agent_name" and not v.strip():
+            raise HTTPException(422, "Navn kan ikke være tomt")
+        with db.conn() as c:
+            c.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (f"pref:{k}", v))
+    return get_prefs()
 
 
 @app.get("/api/benchmark")

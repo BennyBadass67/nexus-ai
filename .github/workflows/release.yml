@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Last ned NEXUS-AI_*_x64-setup.exe og kjor den. Eksisterende installasjoner oppdateres automatisk."
+          releaseBody: "Nytt i 0.3.0: Tilpass-siden med tema (Mørk, Midnatt, Lys), aksentfarge, agentens navn og personlighet. Eksisterende installasjoner oppdateres automatisk."
           releaseDraft: false
           prerelease: false

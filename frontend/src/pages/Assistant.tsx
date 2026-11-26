@@ -7,7 +7,7 @@ import Markdown from "../components/Markdown";
 const SUGGEST = ["Forklar hva du kan hjelpe meg med", "Skriv en kort e-post til en kunde", "Lag en plan for uka mi", "Forklar noe vanskelig enkelt"];
 
 export default function Assistant({ openId, onOpened, goModels }: { openId: number | null; onOpened: () => void; goModels: () => void }) {
-  const { model, models, setModel, health, refresh } = useApp();
+  const { model, models, setModel, health, refresh, prefs } = useApp();
   const [convs, setConvs] = useState<Conv[]>([]);
   const [cid, setCid] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -85,7 +85,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
           <div className="mx-auto max-w-3xl space-y-6 pb-6">
             {msgs.length === 0 && (
               <div className="flex min-h-[55vh] animate-rise flex-col items-center justify-center text-center">
-                <div className="mb-5 grid h-16 w-16 place-items-center rounded-3xl text-[#04101f] shadow-[0_12px_40px_-8px_rgba(90,169,255,.8)]" style={{ background: "linear-gradient(135deg,#d5ebff,#6b9bff 60%,#8d6bff)" }}><Sparkles size={28} /></div>
+                <div className="mb-5 grid h-16 w-16 place-items-center rounded-3xl text-[#04101f] shadow-[0_12px_40px_-8px_rgba(var(--accent),.8)]" style={{ background: "linear-gradient(135deg,rgb(var(--accent-hi)),rgb(var(--accent)) 60%,rgb(var(--accent2)))" }}><Sparkles size={28} /></div>
                 <h1 className="text-[28px] font-semibold tracking-tight">Hei, Benjamin</h1>
                 <p className="mt-1 text-white/50">{noModel ? "Du trenger en modell først." : health?.ollama_online === false ? "Ollama er ikke startet." : "Hva vil du jobbe med?"}</p>
                 {noModel ? <button className="btn-primary mt-5" onClick={goModels}>Last ned en modell</button> : (
@@ -99,7 +99,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
               return m.role === "user" ? (
                 <div key={i} className="flex animate-rise justify-end">
                   <div className="max-w-[80%] whitespace-pre-wrap rounded-[22px] rounded-br-md px-4 py-3 text-[15px] leading-relaxed shadow-lg"
-                    style={{ background: "linear-gradient(135deg, rgba(90,169,255,.38), rgba(110,120,255,.3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>{m.content}</div>
+                    style={{ background: "linear-gradient(135deg, rgba(var(--accent),.38), rgba(var(--accent2),.3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>{m.content}</div>
                 </div>
               ) : (
                 <div key={i} className="group flex animate-rise gap-3">
@@ -121,7 +121,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
         {err && <div className="mx-6 mb-2 animate-pop rounded-xl bg-rose-500/12 px-4 py-2.5 text-sm text-rose-200 ring-1 ring-rose-400/20">{err}</div>}
         <div className="px-6 pb-5">
           <div className="glass-soft mx-auto flex max-w-3xl items-end gap-2 rounded-[22px] p-2 pl-4 transition focus-within:ring-1 focus-within:ring-nx-blue/50">
-            <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder="Skriv en melding…" autoFocus
+            <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={`Skriv til ${prefs.agent_name}…`} autoFocus
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               className="max-h-44 min-h-[40px] flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-white/30" />
             <div className="relative">

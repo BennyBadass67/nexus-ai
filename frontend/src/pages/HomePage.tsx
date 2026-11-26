@@ -7,7 +7,7 @@ const greet = () => { const h = new Date().getHours(); return h < 5 ? "God natt"
 const ago = (t: number) => { const m = Math.round((Date.now() / 1000 - t) / 60); return m < 1 ? "nå" : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} t` : `${Math.round(m / 1440)} d`; };
 
 export default function HomePage({ go }: { go: (p: string) => void }) {
-  const { health, models, model, pulls, pull } = useApp();
+  const { health, models, model, pulls, pull, prefs } = useApp();
   const [recent, setRecent] = useState<Conv[] | null>(null);
   useEffect(() => { api.conversations().then((c) => setRecent(c.slice(0, 5))).catch(() => setRecent([])); }, []);
   const stat = (Icon: typeof Cpu, label: string, value: string, sub: string, delay: number) => (
@@ -23,7 +23,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
     <div className="h-full space-y-3 overflow-auto pr-1">
       <div className="glass relative overflow-hidden rounded-[28px] p-8">
         <div className="pointer-events-none absolute -right-10 -top-16 h-64 w-64 rounded-full bg-nx-blue/25 blur-3xl" />
-        <div className="text-sm text-white/50">{greet()}, Benjamin</div>
+        <div className="text-sm text-white/50">{greet()}, {prefs.user_name}</div>
         <h1 className="mt-1 max-w-xl text-[34px] font-semibold leading-[1.1] tracking-tight">Hva skal vi gjøre i dag?</h1>
         <div className="mt-6 flex gap-2.5">
           <button className="btn-primary flex items-center gap-2" onClick={() => go("assistant")}>Åpne Assistant <ArrowRight size={15} /></button>

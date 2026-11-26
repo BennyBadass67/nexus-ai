@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: { sans: ["Inter Variable", "Inter", "Segoe UI Variable", "Segoe UI", "system-ui", "sans-serif"] },
-      colors: { nx: { blue: "#5aa9ff", ice: "#bfe0ff", ink: "#070b14" } },
+      colors: { nx: { blue: "rgb(var(--accent) / <alpha-value>)", ice: "rgb(var(--accent-hi) / <alpha-value>)", ink: "#070b14" } },
       keyframes: {
         rise: { "0%": { opacity: 0, transform: "translateY(8px)" }, "100%": { opacity: 1, transform: "none" } },
         blink: { "50%": { opacity: 0.2 } },

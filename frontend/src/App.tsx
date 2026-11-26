@@ -26,7 +26,7 @@ function Shell() {
   const [palette, setPalette] = useState(false);
   const [openConv, setOpenConv] = useState<number | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
-  const { health, model, models, setModel, pulls } = useApp();
+  const { health, model, models, setModel, pulls, prefs } = useApp();
   const online = !!health?.ollama_online;
   const idx = NAV.findIndex((n) => n.id === page);
   const nav = (p: Page) => { setPage(p); localStorage.setItem("nexus.page", p); };
@@ -49,13 +49,13 @@ function Shell() {
     <div className="flex h-full gap-3 p-3">
       <nav className="glass relative flex w-[76px] flex-col items-center gap-1 rounded-[28px] py-4 md:w-60 md:items-stretch md:px-3">
         <div className="mb-4 flex items-center gap-3 px-1 md:px-2">
-          <div className="grid h-10 w-10 flex-none place-items-center rounded-2xl text-[#04101f] shadow-[0_8px_24px_-6px_rgba(90,169,255,.8)]"
-            style={{ background: "linear-gradient(135deg,#d5ebff,#6b9bff 60%,#8d6bff)" }}><Sparkles size={20} /></div>
-          <div className="hidden md:block"><div className="text-[15px] font-semibold tracking-wide">NEXUS</div>
+          <div className="grid h-10 w-10 flex-none place-items-center rounded-2xl text-[#04101f] shadow-[0_8px_24px_-6px_rgba(var(--accent),.8)]"
+            style={{ background: "linear-gradient(135deg,rgb(var(--accent-hi)),rgb(var(--accent)) 60%,rgb(var(--accent2)))" }}><Sparkles size={20} /></div>
+          <div className="hidden md:block"><div className="text-[15px] font-semibold tracking-wide">{prefs.agent_name}</div>
             <div className="text-[11px] text-white/45">personlig agent</div></div>
         </div>
         <div className="relative flex flex-col gap-1">
-          <div className="absolute left-0 right-0 h-11 rounded-2xl bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_6px_20px_-8px_rgba(90,169,255,.6)] transition-transform duration-500 ease-[cubic-bezier(.3,1.2,.4,1)]"
+          <div className="absolute left-0 right-0 h-11 rounded-2xl bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_6px_20px_-8px_rgba(var(--accent),.6)] transition-transform duration-500 ease-[cubic-bezier(.3,1.2,.4,1)]"
             style={{ transform: `translateY(${idx * 48}px)` }}>
             <div className="absolute left-0 top-3 h-5 w-[3px] rounded-r-full bg-nx-blue" /></div>
           {NAV.map(({ id, label, icon: Icon }) => (
