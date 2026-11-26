@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command, StickyNote } from "lucide-react";
+import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command, StickyNote, GraduationCap } from "lucide-react";
 import { Provider, useApp } from "./store";
 import { api, Conv, extrasApi, updateApi } from "./api";
 import { UpdatedToast } from "./components/UpdateCard";
@@ -12,6 +12,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ActivityPage from "./pages/ActivityPage";
 import AgentsPage from "./pages/AgentsPage";
 import Intro from "./components/Intro";
+import StudyPage from "./pages/StudyPage";
 import NotesPage from "./pages/NotesPage";
 import CommandPalette, { Cmd } from "./components/CommandPalette";
 
@@ -24,6 +25,7 @@ const NAV = [
   { id: "workspace", label: "Workspace", icon: FolderOpen },
   { id: "automations", label: "Agenter", icon: Workflow },
   { id: "memory", label: "Memory", icon: Brain },
+  { id: "study", label: "Studie", icon: GraduationCap },
   { id: "notes", label: "Notater", icon: StickyNote },
   { id: "activity", label: "Activity", icon: Activity },
   { id: "settings", label: "Settings", icon: Settings },
@@ -119,6 +121,7 @@ function Shell() {
           {page === "automations" && <AgentsPage />}
           {page === "memory" && <MemoryPage />}
           {page === "notes" && <NotesPage />}
+          {page === "study" && <StudyPage />}
           {page === "activity" && <ActivityPage />}
           {page === "settings" && <SettingsPage />}
         </div>

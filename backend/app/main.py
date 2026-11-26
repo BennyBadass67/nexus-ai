@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, extras, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
+from . import agent, config, db, extras, study, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
@@ -24,6 +24,7 @@ app.include_router(update.router)
 app.include_router(memory.router)
 app.include_router(workspace.router)
 app.include_router(extras.router)
+app.include_router(study.router)
 
 SYSTEM_PROMPT = (
     "Du er NEXUS, en personlig KI-assistent som kjører lokalt på brukerens PC. "

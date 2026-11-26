@@ -17,6 +17,11 @@ async def chat(req: Request):
     if b["model"] != "mock:1b":
         return JSONResponse({"error": f"model '{b['model']}' not found"}, status_code=404)
     last = b["messages"][-1]["content"]
+    if b.get("format") == "json":
+        return JSONResponse({"message": {"role": "assistant", "content": json.dumps({"cards": [
+            {"front": "Hva er fotosyntese?", "back": "Prosessen der planter lager sukker og oksygen av lys, vann og CO2."},
+            {"front": "Hvor i cellen skjer fotosyntesen?", "back": "I kloroplastene."},
+            {"front": "Hvilken gass tar planter opp?", "back": "Karbondioksid (CO2)."}]})}, "done": True})
     def g():
         for w in ["Hei ", "fra ", "mock: ", last]:
             yield json.dumps({"message": {"role": "assistant", "content": w}, "done": False}) + "\n"

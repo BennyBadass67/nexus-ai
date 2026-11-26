@@ -209,3 +209,27 @@ export const extrasApi = {
   kClear: () => j<{ ok: boolean }>("/api/knowledge", { method: "DELETE" }),
   restore: async (file: File) => { const r = await fetch("/api/backup/restore", { method: "POST", headers: { "content-type": "application/octet-stream" }, body: file }); if (!r.ok) throw new Error(String((await r.json().catch(() => ({ detail: r.statusText }))).detail)); return r.json() as Promise<{ ok: boolean; restored: Record<string, number>; safety_copy: string }>; },
 };
+
+export type Deck = { id: number; title: string; total: number; due: number; learned: number };
+export type Card = { id: number; deck_id: number; front: string; back: string; interval: number; reps: number };
+export const studyApi = {
+  decks: () => j<Deck[]>("/api/study/decks"),
+  cards: (id: number, due = false) => j<Card[]>(`/api/study/decks/${id}/cards${due ? "?due=true" : ""}`),
+  generate: (b: { model: string; text?: string; title?: string; n?: number; deck_id?: number; note_id?: number }) => j<{ deck_id: number; added: number }>("/api/study/generate", { method: "POST", headers: J, body: JSON.stringify(b) }),
+  review: (id: number, grade: number) => j<{ interval_days: number }>(`/api/study/cards/${id}/review`, { method: "POST", headers: J, body: JSON.stringify({ grade }) }),
+  delDeck: (id: number) => j<{ ok: boolean }>("/api/study/decks/" + id, { method: "DELETE" }),
+  ask: async (model: string, q: string, onTok: (t: string) => void) => {
+    const r = await fetch("/api/knowledge/ask", { method: "POST", headers: J, body: JSON.stringify({ model, q }) });
+    if (!r.ok || !r.body) throw new Error(await r.text());
+    const srcs: string[] = JSON.parse(r.headers.get("X-Sources") || "[]");
+    const rd = r.body.getReader(); const dec = new TextDecoder();
+    for (;;) { const { done, value } = await rd.read(); if (done) break; onTok(dec.decode(value, { stream: true })); }
+    return srcs;
+  },
+  transform: async (model: string, action: string, text: string, onTok: (t: string) => void, signal?: AbortSignal) => {
+    const r = await fetch("/api/write/transform", { method: "POST", headers: J, body: JSON.stringify({ model, action, text }), signal });
+    if (!r.ok || !r.body) throw new Error(await r.text());
+    const rd = r.body.getReader(); const dec = new TextDecoder();
+    for (;;) { const { done, value } = await rd.read(); if (done) break; onTok(dec.decode(value, { stream: true })); }
+  },
+};
