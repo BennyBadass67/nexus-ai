@@ -29,7 +29,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
   const done = steps.filter(Boolean).length;
   const stat = (Icon: typeof Cpu, label: string, value: string, sub: string, delay: number, hot = false) => (
     <div className={`${hot ? "stat-hot" : "glass"} animate-rise rounded-[26px] p-5`} style={{ animationDelay: `${delay}ms` }}>
-      <div className={`grid h-9 w-9 place-items-center rounded-full ${hot ? "bg-white/25" : "bg-white/60"}`}><Icon size={16} className={hot ? "" : "text-nx-blue"} /></div>
+      <div className={`grid h-9 w-9 place-items-center rounded-full ${hot ? "bg-black/20" : "bg-white/60"}`}><Icon size={16} className={hot ? "" : "text-nx-blue"} /></div>
       <div className="mt-5 truncate text-[30px] font-semibold leading-none tracking-tight">{value}</div>
       <div className="mt-2 text-sm font-medium">{label}</div>
       <div className="truncate text-xs text-white/50">{sub}</div>
@@ -48,21 +48,21 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <div className="hero-card animate-rise relative overflow-hidden rounded-[30px] p-7">
-          <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
+          <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-black/10 blur-3xl" />
           <div className="flex items-center justify-between gap-6">
             <div className="max-w-md">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs"><span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-white" : "bg-black/40"}`} />{online ? "Ollama kjører" : "Ollama er offline"}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-black/25 px-3 py-1 text-xs"><span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-white" : "bg-black/40"}`} />{online ? "Ollama kjører" : "Ollama er offline"}</span>
               <h2 className="mt-4 text-[34px] font-semibold leading-[1.08] tracking-tight">Din lokale AI er <span className="serif-i text-[40px]">{done === 3 ? "klar" : "på vei"}</span> til å jobbe</h2>
               <p className="mt-3 text-sm opacity-85">{done === 3 ? `Alt kjører på PC-en din med ${model}. Ingen data forlater maskinen.` : "Fullfør oppsettet: Ollama på, minst én modell, og velg en modell."}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <button className="hero-btn rounded-full bg-white px-5 py-2 text-sm font-medium transition hover:scale-[1.03]" onClick={() => go("assistant")}>Åpne Assistant <ArrowUpRight size={14} className="inline" /></button>
-                <button className="rounded-full border border-white/50 px-5 py-2 text-sm transition hover:bg-white/15" onClick={() => go("models")}>+ Modeller</button></div>
+                <button className="rounded-full border border-white/50 px-5 py-2 text-sm transition hover:bg-black/15" onClick={() => go("models")}>+ Modeller</button></div>
             </div>
             <Ring done={done} total={3} />
           </div>
           <div className="mt-6 grid grid-cols-3 gap-4 border-t border-white/25 pt-4 text-sm">
             {[["Ollama", online ? "på" : "av", steps[0]], ["Modeller", String(nModels), steps[1]], ["Valgt", model || "ingen", steps[2]]].map(([l, v, ok]) => (
-              <div key={String(l)}><div className="truncate text-xl font-semibold">{v}</div><div className="text-xs opacity-75">{l} {ok ? "✓" : ""}</div></div>))}
+              <div key={String(l)}><div className="truncate text-xl font-semibold">{v}</div><div className="text-xs opacity-95">{l} {ok ? "✓" : ""}</div></div>))}
           </div>
         </div>
         <div className="glass animate-rise rounded-[30px] p-5" style={{ animationDelay: "60ms" }}>

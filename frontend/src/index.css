@@ -160,3 +160,26 @@ html.glass .hero-card:hover { transform: translateY(-2px); }
 html.glass .stat-hot, html.glass .glass { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
 html.glass main .glass:hover { box-shadow: 0 30px 56px -26px rgba(90,40,20,.5), inset 0 1px 0 rgba(255,255,255,.85); }
 @media (prefers-reduced-motion: reduce) { .intro { display: none; } * { animation-duration: .01s !important; transition-duration: .01s !important; } }
+
+/* ===== Kontrast (WCAG AA) ===== */
+.nav-label { opacity: .78; font-weight: 600; }
+html.glass [class*="text-white/"] { color: rgba(43,29,23,.8); }
+html.glass .nav-item { color: rgba(43,29,23,.82); }
+html.light [class*="text-white/"] { color: #3b4658; }
+html:not(.light) [class*="text-white/2"], html:not(.light) [class*="text-white/3"], html:not(.light) [class*="text-white/4"], html:not(.light) [class*="text-white/5"] { color: rgba(255,255,255,.7); }
+html:not(.light) .nav-item { color: rgba(255,255,255,.72); }
+html.light [class*="text-nx-ice"], html.light .text-nx-blue { color: color-mix(in srgb, rgb(var(--accent-deep)) 72%, #000); }
+html.light .text-nx-blue.btn-primary { color: inherit; }
+.btn-primary { background: rgb(var(--accent-deep)); color: rgb(var(--on-accent)); box-shadow: 0 6px 20px -6px rgb(var(--accent) / .55), inset 0 1px 0 rgba(255,255,255,.25); }
+.btn-primary, .btn-primary * { color: rgb(var(--on-accent)); }
+html.light .btn-primary, html.light .btn-primary *, html.glass .btn-primary, html.glass .btn-primary * { color: rgb(var(--on-accent)); }
+html.glass .btn-primary { background: #1d1411; } html.glass .btn-primary, html.glass .btn-primary * { color: #fff; }
+.hero-card { background: linear-gradient(150deg, color-mix(in srgb, rgb(var(--accent-deep)) 92%, #000) -20%, color-mix(in srgb, rgb(var(--accent-deep)) 84%, #000) 50%, color-mix(in srgb, rgb(var(--accent-deep)) 68%, #000) 120%); }
+.hero-card, .hero-card * { color: rgb(var(--on-accent)) !important; }
+.hero-card .hero-btn, .hero-card .hero-btn * { color: #1d1411 !important; }
+.stat-hot { background: linear-gradient(150deg, color-mix(in srgb, rgb(var(--accent-deep)) 80%, #000) -30%, color-mix(in srgb, rgb(var(--accent-deep)) 70%, #000) 60%); }
+.stat-hot, .stat-hot * { color: rgb(var(--on-accent)) !important; }
+
+html.light .text-emerald-600, html.light .text-emerald-500, html.light .text-emerald-400 { color: #047857; }
+html:not(.light) .text-emerald-600 { color: #34d399; }
+html:not(.light) .text-nx-blue { color: rgb(var(--accent-hi)); }

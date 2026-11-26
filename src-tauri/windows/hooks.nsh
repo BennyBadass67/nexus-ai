@@ -12,6 +12,7 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  StrCpy $R9 "(ok)"
   ; Egen .ico-fil i installasjonsmappa, og snarveiene peker direkte på den (for docker/launchere som leser snarveiens ikon).
   IfFileExists "$INSTDIR\nexus-ai.ico" +2 0
   CopyFiles /SILENT "$INSTDIR\resources\nexus-ai.ico" "$INSTDIR\nexus-ai.ico"
@@ -31,6 +32,19 @@
   nsExec::Exec '"$SYSDIR\ie4uinit.exe" -show'
   Pop $0
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
+  ; Slett ikon-cache-databasene helt (de er låst mens Utforsker kjører, så den stoppes og startes igjen). Windows bygger cachen opp på nytt fra de nye ikonene.
+  nsExec::Exec 'taskkill /F /IM explorer.exe'
+  Pop $0
+  Sleep 1000
+  Delete "$LOCALAPPDATA\IconCache.db"
+  Delete "$LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache_*.db"
+  IfFileExists "$LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache_256.db" 0 +2
+  StrCpy $R9 "FEIL: iconcache_256.db finnes fortsatt (låst)"
+  Exec '"$WINDIR\explorer.exe"'
+  FileOpen $1 "$TEMP\nexus-installer-hook.log" a
+  FileSeek $1 0 END
+  FileWrite $1 "POSTINSTALL: Utforsker restartet, iconcache*.db slettet $R9$\r$\n"
+  FileClose $1
   FileOpen $1 "$TEMP\nexus-installer-hook.log" a
   FileSeek $1 0 END
   FileWrite $1 "POSTINSTALL: ikon-cache oppdatert$\r$\n"
