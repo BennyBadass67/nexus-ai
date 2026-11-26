@@ -8,6 +8,7 @@ import Models from "./pages/Models";
 import Planned from "./pages/Planned";
 import SettingsPage from "./pages/SettingsPage";
 import ActivityPage from "./pages/ActivityPage";
+import AgentsPage from "./pages/AgentsPage";
 import CommandPalette, { Cmd } from "./components/CommandPalette";
 
 const NAV = [
@@ -15,7 +16,7 @@ const NAV = [
   { id: "assistant", label: "Assistant", icon: MessageSquare },
   { id: "models", label: "Models", icon: Boxes },
   { id: "workspace", label: "Workspace", icon: FolderOpen },
-  { id: "automations", label: "Automations", icon: Workflow },
+  { id: "automations", label: "Agents", icon: Workflow },
   { id: "memory", label: "Memory", icon: Brain },
   { id: "activity", label: "Activity", icon: Activity },
   { id: "settings", label: "Settings", icon: Settings },
@@ -84,7 +85,7 @@ function Shell() {
           {page === "assistant" && <Assistant openId={openConv} onOpened={() => setOpenConv(null)} goModels={() => nav("models")} />}
           {page === "models" && <Models />}
           {page === "workspace" && <Planned title="Workspace" phase={4} icon={FolderOpen} text="Velg mapper agenten får jobbe i. Alt utenfor er låst." items={["Filutforsker for arbeidsområder", "Agenten leser og skriver kun innenfor godkjente mapper", "Sletting krever alltid din godkjenning"]} />}
-          {page === "automations" && <Planned title="Automations" phase={3} icon={Workflow} text="Oppgaver agenten gjør selv, med plan du kan se." items={["Gi en oppgave, agenten lager en plan", "Verktøy: filer, terminal, nettleser", "Stop Agent-knapp som alltid virker"]} />}
+          {page === "automations" && <AgentsPage />}
           {page === "memory" && <Planned title="Memory" phase={5} icon={Brain} text="Det agenten husker om deg og prosjektene dine." items={["Se, rediger og slett minner", "Preferanser og viktige beslutninger", "Alt lagres lokalt i SQLite"]} />}
           {page === "activity" && <ActivityPage />}
           {page === "settings" && <SettingsPage />}

@@ -6,7 +6,7 @@ export type Step = { call_id: string; tool: string; describe: string; risk: stri
 export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number; steps?: Step[] };
 export type ConvFull = { id: number; title: string; model: string | null; messages: Msg[] };
 
-async function j<T>(url: string, init?: RequestInit): Promise<T> {
+export async function j<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
@@ -23,6 +23,40 @@ export type Bench = { model: string; tokens: number; tps: number; load_s: number
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
 export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string };
+
+export type AgentDef = { id: number; name: string; role: string; prompt: string; model: string | null; tools: string[] };
+export type Room = { id: number; title: string; agent_ids: number[]; max_rounds: number; mode: "roundrobin" | "leader" };
+export type RoomMsg = { id: number; author: string; agent_id: number | null; content: string; created_at: number };
+export type RoomEvent =
+  | { type: "meta"; run_id: string; room_id: number } | { type: "user_message"; text: string }
+  | { type: "turn_start"; agent: string; agent_id: number; model: string } | { type: "token"; agent: string; text: string }
+  | { type: "turn_end"; agent: string; text: string } | { type: "notice"; text: string } | { type: "stopped" }
+  | { type: "error"; message: string } | { type: "done" }
+  | { type: "tool_call"; agent: string; call_id: string; tool: string; describe: string; risk: string; needs_approval: boolean }
+  | { type: "tool_result"; call_id: string; status: "ok" | "error" | "denied"; result: string } | { type: "approval"; call_id: string };
+
+export async function streamRoom(id: number, body: { message: string; default_model: string }, onEvent: (e: RoomEvent) => void, signal: AbortSignal) {
+  const r = await fetch(`/api/rooms/${id}/run`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+  if (!r.ok || !r.body) throw new Error(`${r.status} ${await r.text()}`);
+  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true }); let i: number;
+    while ((i = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (line) onEvent(JSON.parse(line)); }
+  }
+}
+const J = { "Content-Type": "application/json" };
+export const teamApi = {
+  agents: () => j<AgentDef[]>("/api/agents"),
+  saveAgent: (a: Partial<AgentDef>) => j<AgentDef>(a.id ? `/api/agents/${a.id}` : "/api/agents", { method: a.id ? "PUT" : "POST", headers: J, body: JSON.stringify(a) }),
+  delAgent: (id: number) => j<{ ok: boolean }>(`/api/agents/${id}`, { method: "DELETE" }),
+  rooms: () => j<Room[]>("/api/rooms"),
+  room: (id: number) => j<Room & { messages: RoomMsg[] }>(`/api/rooms/${id}`),
+  saveRoom: (r: Partial<Room>) => j<Room>(r.id ? `/api/rooms/${r.id}` : "/api/rooms", { method: r.id ? "PUT" : "POST", headers: J, body: JSON.stringify(r) }),
+  delRoom: (id: number) => j<{ ok: boolean }>(`/api/rooms/${id}`, { method: "DELETE" }),
+  clearRoom: (id: number) => j<{ ok: boolean }>(`/api/rooms/${id}/clear`, { method: "POST" }),
+  example: () => j<Room & { messages: RoomMsg[] }>("/api/rooms/example", { method: "POST" }),
+};
 
 export type ToolInfo = { name: string; description: string; risk: string; needs_approval: boolean };
 export type Activity = { id: number; run_id: string | null; ts: number; kind: string; tool: string | null; detail: string; status: string; result: string };

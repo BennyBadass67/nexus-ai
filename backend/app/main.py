@@ -11,12 +11,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, library, ollama, system, tools
+from . import agent, config, db, library, ollama, rooms, system, tools
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
 app = FastAPI(title="NEXUS AI", version="0.1.0")
 db.init()
+app.include_router(rooms.router)
 
 SYSTEM_PROMPT = (
     "Du er NEXUS, en personlig KI-assistent som kjører lokalt på brukerens PC. "
