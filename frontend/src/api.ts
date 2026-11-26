@@ -233,3 +233,8 @@ export const studyApi = {
     for (;;) { const { done, value } = await rd.read(); if (done) break; onTok(dec.decode(value, { stream: true })); }
   },
 };
+
+export const smartApi = {
+  autotitle: (cid: number, model: string) => j<{ title: string; changed: boolean }>(`/api/conversations/${cid}/autotitle`, { method: "POST", headers: J, body: JSON.stringify({ model }) }),
+  suggest: (cid: number, model: string) => j<{ suggestions: string[] }>(`/api/conversations/${cid}/suggest`, { method: "POST", headers: J, body: JSON.stringify({ model }) }),
+};

@@ -136,3 +136,47 @@ def test_generate_ollama_down(monkeypatch):
     monkeypatch.setattr(ollama, "chat_json", down)
     r = client.post("/api/study/generate", json={"model": "m", "text": TEXT})
     assert r.status_code == 503 and "Ollama" in r.json()["detail"]
+
+
+def _conv(title, msgs):
+    from app import db
+    with db.conn() as c:
+        cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at) VALUES(?,?,1,1)", (title, "m")).lastrowid
+        for r, t in msgs:
+            c.execute("INSERT INTO messages(conversation_id,role,content,created_at) VALUES(?,?,?,1)", (cid, r, t))
+    return cid
+
+
+def test_clean_title():
+    assert study.clean_title('Tittel: "Reise til Lofoten".') == "Reise til Lofoten"
+    assert study.clean_title("**Matte-lekser**\nforklaring") == "Matte-lekser"
+    assert study.clean_title("") == ""
+
+
+def test_autotitle(monkeypatch):
+    async def fake_stream(model, msgs):
+        yield "token", '"Planlegger '
+        yield "token", 'Lofoten-tur"'
+    monkeypatch.setattr(ollama, "chat_stream", fake_stream)
+    cid = _conv("Jeg vil planlegge en tur til Lofoten", [("user", "Jeg vil planlegge en tur til Lofoten"), ("assistant", "Gjerne!")])
+    r = client.post(f"/api/conversations/{cid}/autotitle", json={"model": "m"}).json()
+    assert r == {"title": "Planlegger Lofoten-tur", "changed": True}
+    assert client.post(f"/api/conversations/{cid}/autotitle", json={"model": "m"}).json()["changed"] is False   # allerede satt: ikke overskriv
+    own = _conv("Mitt eget navn", [("user", "hei"), ("assistant", "hei")])
+    assert client.post(f"/api/conversations/{own}/autotitle", json={"model": "m"}).json()["changed"] is False   # brukerens navn beholdes
+    assert client.post("/api/conversations/99999/autotitle", json={"model": "m"}).status_code == 404
+    async def boom(model, msgs):
+        raise RuntimeError("x"); yield
+    monkeypatch.setattr(ollama, "chat_stream", boom)
+    c2 = _conv("hei der", [("user", "hei der"), ("assistant", "hei")])
+    assert client.post(f"/api/conversations/{c2}/autotitle", json={"model": "m"}).json()["changed"] is False     # feil gir ikke 500
+
+
+def test_suggest(monkeypatch):
+    monkeypatch.setattr(ollama, "chat_json", fake({"suggestions": ["Hva koster det?", {"q": "Når er best å reise?"}, "Hva koster det?", "x", 5]}))
+    cid = _conv("t", [("user", "Lofoten?"), ("assistant", "Fint sted.")])
+    assert client.post(f"/api/conversations/{cid}/suggest", json={"model": "m"}).json()["suggestions"] == ["Hva koster det?", "Når er best å reise?"]
+    monkeypatch.setattr(ollama, "chat_json", fake("tull"))
+    assert client.post(f"/api/conversations/{cid}/suggest", json={"model": "m"}).json()["suggestions"] == []
+    empty = _conv("e", [])
+    assert client.post(f"/api/conversations/{empty}/suggest", json={"model": "m"}).status_code == 422

@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.0.0: Stor oppdatering. Søk overalt, notater, maler, sikkerhetskopi, systemmonitor, kunnskapsbase, tekstfiler i chat, eksport av samtaler, og mange feilrettinger."
+          releaseBody: "1.1.0: Studie (øvingskort fra egen tekst), skriveverktøy, spør dokumentene dine med kilder, automatiske samtaletitler og oppfølgingsforslag, og jevnere animasjoner."
           releaseDraft: false
           prerelease: false

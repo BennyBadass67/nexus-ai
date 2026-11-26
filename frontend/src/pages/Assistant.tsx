@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText } from "lucide-react";
-import { api, Conv, extrasApi, Msg, Step, streamAgent, streamChat, Tpl } from "../api";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2 } from "lucide-react";
+import { api, Conv, extrasApi, Msg, smartApi, Step, streamAgent, streamChat, Tpl } from "../api";
 import Steps from "../components/Steps";
 import { useApp } from "../store";
 import Markdown from "../components/Markdown";
@@ -24,6 +24,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [pick, setPick] = useState(false);
+  const [sugg, setSugg] = useState<string[]>([]); const [suggBusy, setSuggBusy] = useState(false);
   const [tpls, setTpls] = useState<Tpl[]>([]); const [tplOpen, setTplOpen] = useState(false);
   const fileIn = useRef<HTMLInputElement>(null);
   const attach = async (f: File) => {
@@ -57,7 +58,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
 
   const run = async (message: string, regenerate = false) => {
     if (!model) { setErr("Ingen modell valgt. Last ned en under Models."); return; }
-    setErr(""); setNotice(""); setBusy(true); stick.current = true; runId.current = null;
+    setErr(""); setNotice(""); setSugg([]); setBusy(true); stick.current = true; runId.current = null;
     setMsgs((m) => {
       const base = regenerate && m[m.length - 1]?.role === "assistant" ? m.slice(0, -1) : [...m, { role: "user" as const, content: message }];
       return [...base, { role: "assistant", content: "", model }];
@@ -83,7 +84,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
       if (tokTimer.current) clearTimeout(tokTimer.current); flushTok();
       setBusy(false); loadList(); refresh();
       setMsgs((m) => (m.length && m[m.length - 1].role === "assistant" && !m[m.length - 1].content ? m.slice(0, -1) : m));
-      void id;
+      if (id && cid === null && !regenerate) smartApi.autotitle(id, model).then((r) => { if (r.changed) loadList(); }).catch(() => {});
     }
   };
   const send = () => { const t = text.trim(); if (!t || busy) return; setText(""); run(t); };
@@ -145,6 +146,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
           </div>
         </div>
         {notice && <div className="mx-6 mb-2 rounded-xl bg-amber-400/10 px-4 py-2 text-xs text-amber-100">{notice}</div>}
+        {sugg.length > 0 && !busy && <div className="mx-6 mb-2 flex flex-wrap gap-2">{sugg.map((s, i) => <button key={s} onClick={() => { setSugg([]); run(s); }} className="animate-pop rounded-full glass-soft px-3.5 py-1.5 text-sm transition hover:-translate-y-0.5 hover:bg-white/15 active:scale-95" style={{ animationDelay: `${i * 70}ms` }}>{s}</button>)}</div>}
         {err && <div className="mx-6 mb-2 animate-pop rounded-xl bg-rose-500/12 px-4 py-2.5 text-sm text-rose-200 ring-1 ring-rose-400/20">{err}</div>}
         <div className="px-6 pb-5">
           <div className="glass-soft mx-auto flex max-w-3xl items-end gap-2 rounded-[22px] p-2 pl-4 transition focus-within:ring-1 focus-within:ring-nx-blue/50">
@@ -162,6 +164,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
                   {tpls.map((t) => <button key={t.id} onClick={() => { setText((x) => (x ? x + "\n" : "") + t.body); setTplOpen(false); area.current?.focus(); }} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-white/10"><div className="font-medium">{t.title}</div><div className="truncate text-xs text-white/55">{t.body}</div></button>)}
                 </div></>)}
             </div>
+            {cid && msgs.length > 0 && !busy && <button onClick={() => { setSuggBusy(true); smartApi.suggest(cid, model).then((r) => setSugg(r.suggestions)).catch(() => setSugg([])).finally(() => setSuggBusy(false)); }} title="Foreslå oppfølgingsspørsmål" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10">{suggBusy ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white/80" /> : <Lightbulb size={16} />}</button>}
             {cid && msgs.length > 0 && <a href={`/api/conversations/${cid}/export`} download title="Last ned samtalen som Markdown" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><Download size={16} /></a>}
             <button onClick={() => setAgentMode(!agentMode)} title={agentMode ? "Agent-modus er på: kan bruke filer og nett" : "Slå på agent-modus"}
               className={`grid h-10 w-10 place-items-center rounded-xl transition ${agentMode ? "bg-nx-blue/25 text-nx-ice ring-1 ring-nx-blue/60" : "text-white/45 hover:bg-white/10"}`}><Wrench size={16} /></button>

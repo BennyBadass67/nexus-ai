@@ -310,3 +310,77 @@ async def ask(b: AskIn):
         except Exception as e:
             yield "\n\n[Feil: " + str(e) + "]"
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8", headers=headers)
+
+
+# ---------- Smart chat: auto-tittel og oppfølgingsforslag ----------
+class ModelIn(BaseModel):
+    model: str = Field(min_length=1)
+
+
+def _conv_text(cid: int, limit: int = 4) -> tuple[str, str]:
+    with db.conn() as c:
+        conv = c.execute("SELECT title FROM conversations WHERE id=?", (cid,)).fetchone()
+        if not conv:
+            raise HTTPException(404, "Samtalen finnes ikke")
+        rows = c.execute("SELECT role,content FROM messages WHERE conversation_id=? AND role IN ('user','assistant') "
+                         "ORDER BY id LIMIT ?", (cid, limit)).fetchall()
+    return conv["title"], "\n".join(f"{r['role']}: {r['content'][:600]}" for r in rows)
+
+
+def clean_title(t: str) -> str:
+    t = re.sub(r"[\"“”«»*#`]", "", t.strip().splitlines()[0] if t.strip() else "")
+    t = re.sub(r"^(tittel|title)\s*:\s*", "", t, flags=re.I).strip(" .:-")
+    return t[:48]
+
+
+@router.post("/api/conversations/{cid}/autotitle")
+async def autotitle(cid: int, b: ModelIn):
+    old, text = _conv_text(cid)
+    if not text:
+        raise HTTPException(422, "Samtalen er tom")
+    first = text.split("\n", 1)[0].removeprefix("user: ").replace("\n", " ")[:48]
+    if old.strip() != first.strip():                    # brukeren har gitt navn selv: ikke rør
+        return {"title": old, "changed": False}
+    sysm = "Lag en kort tittel (2 til 5 ord) for samtalen under, på samme språk som brukeren. Svar KUN med tittelen, uten anførselstegn."
+    out = ""
+    try:
+        async for kind, val in ollama.chat_stream(b.model, [{"role": "system", "content": sysm}, {"role": "user", "content": text}]):
+            if kind == "token":
+                out += val
+                if len(out) > 120:
+                    break
+    except Exception:
+        return {"title": old, "changed": False}
+    t = clean_title(out)
+    if len(t) < 3:
+        return {"title": old, "changed": False}
+    with db.conn() as c:
+        c.execute("UPDATE conversations SET title=? WHERE id=?", (t, cid))
+    return {"title": t, "changed": True}
+
+
+@router.post("/api/conversations/{cid}/suggest")
+async def suggest(cid: int, b: ModelIn):
+    _, text = _conv_text(cid, 8)
+    if not text:
+        raise HTTPException(422, "Samtalen er tom")
+    sysm = ("Foreslå 3 korte oppfølgingsspørsmål brukeren kan stille videre, på samme språk som samtalen. "
+            "Svar KUN med JSON: {\"suggestions\":[\"...?\",\"...?\",\"...?\"]}")
+    try:
+        raw = await ollama.chat_json(b.model, [{"role": "system", "content": sysm}, {"role": "user", "content": text}])
+    except RuntimeError as e:
+        raise HTTPException(502, "Modellen feilet: " + str(e))
+    except httpx.HTTPError:
+        raise HTTPException(503, "Ollama svarer ikke. Start Ollama først.")
+    try:
+        d = json.loads(raw)
+        lst = d if isinstance(d, list) else next((v for v in d.values() if isinstance(v, list)), [])
+    except Exception:
+        lst = []
+    out = []
+    for x in lst:
+        if isinstance(x, dict):
+            x = next((v for v in x.values() if isinstance(v, str)), "")
+        if isinstance(x, str) and 3 <= len(x.strip()) <= 140 and x.strip() not in out:
+            out.append(x.strip())
+    return {"suggestions": out[:3]}

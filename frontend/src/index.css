@@ -234,3 +234,37 @@ html.light .upd-bar { background: rgba(30,41,59,.12); }
 .upd .btn, .upd .btn-primary { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 html.glass .upd-ring.on { background: #1d1411; color: #fff; }
 .sysbar { background: linear-gradient(90deg, rgb(var(--accent-deep)), rgb(var(--accent))); }
+
+/* v1.1: bevegelse og følelse */
+:root { --ease: cubic-bezier(.2,.8,.2,1); }
+html { scroll-behavior: smooth; }
+/* trinnvis inngang for lister og kort */
+.stagger-fix > * { animation-delay: 0ms; }
+main .animate-rise:nth-child(2) { animation-delay: 40ms; }
+main .animate-rise:nth-child(3) { animation-delay: 80ms; }
+main .animate-rise:nth-child(4) { animation-delay: 120ms; }
+main .animate-rise:nth-child(5) { animation-delay: 160ms; }
+main .animate-rise:nth-child(6) { animation-delay: 200ms; }
+main .animate-rise:nth-child(n+7) { animation-delay: 240ms; }
+/* kort løfter seg ved hover, trykk gir respons */
+html:not(.perf) .glass-soft.group, html:not(.perf) .note-row { transition: transform .25s var(--ease), box-shadow .25s var(--ease), background-color .2s; }
+html:not(.perf) .glass-soft.group:hover, html:not(.perf) .note-row:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -16px rgba(40,20,10,.35); }
+button:not(:disabled):active { transform: scale(.97); }
+/* navigasjon: ikon følger musen */
+.nav-item svg { transition: transform .25s var(--ease); }
+.nav-item:hover svg { transform: scale(1.12) rotate(-4deg); }
+.nav-item.on svg { transform: scale(1.06); }
+/* felt: myk fokusring */
+input, textarea, select { transition: border-color .2s, box-shadow .2s, background-color .2s; }
+input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 4px rgb(var(--accent) / .16); }
+/* fremdrift og sysbar glir mykt */
+.sysbar { transition: width .6s var(--ease); }
+/* pustende prikk for «online» */
+@keyframes breathe { 50% { opacity: .45; transform: scale(.85); } }
+.bg-emerald-400, .bg-emerald-500 { animation: breathe 2.4s ease-in-out infinite; }
+/* chat: brukerboble og svar glir inn fra sidene */
+@keyframes slideR { from { opacity: 0; transform: translateX(14px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes slideL { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.justify-end.animate-rise { animation: slideR .35s var(--ease) both; }
+.group.animate-rise.gap-3 { animation: slideL .35s var(--ease) both; }
+html.perf *, html.perf *::before { animation-delay: 0ms !important; }
