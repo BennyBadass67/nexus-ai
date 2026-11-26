@@ -165,18 +165,21 @@ async def system_info(refresh: bool = False):
 
 @app.get("/api/system/rate")
 async def system_rate(size_gb: float):
+    await load_cal()
     hw = await asyncio.to_thread(system.hardware)
     return system.rate(size_gb, hw)
 
 
 @app.get("/api/recommendations")
 async def recommendations():
+    await load_cal()
     hw = await asyncio.to_thread(system.hardware)
     try:
         topics = await system.recommendations(hw)
     except Exception as e:
         return {"ok": False, "error": str(e), "hardware": system.hw_dict(hw), "topics": []}
-    return {"ok": True, "hardware": system.hw_dict(hw), "topics": topics}
+    return {"ok": True, "hardware": system.hw_dict(hw), "topics": topics,
+            "calibrated": system.CAL["k"] is not None, "measured_models": sorted(system.CAL["measured"])}
 
 
 @app.post("/api/benchmark")
@@ -188,10 +191,51 @@ async def benchmark(req: BenchRequest):
         raise HTTPException(503, "Får ikke kontakt med Ollama")
     except Exception as e:
         raise HTTPException(500, str(e))
+    size_gb = 0.0
+    try:
+        size_gb = next((m.get("size", 0) for m in await ollama.tags() if m["name"] == req.model), 0) / 1e9
+    except Exception:
+        pass
+    r = {**r, "size_gb": round(size_gb, 2)}
     with db.conn() as c:
         c.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)",
                   (f"bench:{req.model}", json.dumps({**r, "at": db.now()})))
+    await load_cal()
     return r
+
+
+async def load_cal():
+    """Henter lagrede målinger og kalibrerer vurderingen. Måling for modeller som er slettet ignoreres."""
+    hw = await asyncio.to_thread(system.hardware)
+    with db.conn() as c:
+        rows = c.execute("SELECT key,value FROM settings WHERE key LIKE 'bench:%'").fetchall()
+    try:
+        installed = {m["name"] for m in await ollama.tags()}
+    except Exception:
+        installed = None
+    data = {r["key"][6:]: json.loads(r["value"]) for r in rows}
+    if installed is not None:
+        data = {k: v for k, v in data.items() if k in installed}
+    system.set_calibration(data, hw)
+
+
+@app.post("/api/benchmark/auto")
+async def benchmark_auto():
+    """Måler alle installerte modeller som ikke er målt ennå (minste først)."""
+    try:
+        items = sorted(await ollama.tags(), key=lambda m: m.get("size", 0))
+    except Exception:
+        raise HTTPException(503, "Får ikke kontakt med Ollama")
+    with db.conn() as c:
+        have = {r["key"][6:] for r in c.execute("SELECT key FROM settings WHERE key LIKE 'bench:%'").fetchall()}
+    todo = [m["name"] for m in items if m["name"] not in have][:3]
+    done, errors = [], {}
+    for name in todo:
+        try:
+            done.append(await benchmark(BenchRequest(model=name)))
+        except HTTPException as e:
+            errors[name] = str(e.detail)
+    return {"measured": done, "errors": errors, "remaining": max(0, len([m for m in items if m["name"] not in have]) - len(todo))}
 
 
 @app.get("/api/settings")
@@ -227,6 +271,7 @@ def benchmarks():
 
 @app.get("/api/library")
 async def library_search(q: str = ""):
+    await load_cal()
     try:
         hw = await asyncio.to_thread(system.hardware)
         models = await library.search(q)
@@ -242,11 +287,12 @@ async def library_search(q: str = ""):
 
 @app.get("/api/library/{name}/tags")
 async def library_tags(name: str):
+    await load_cal()
     if not re.fullmatch(r"[A-Za-z0-9._-]+", name):
         raise HTTPException(422, "Ugyldig modellnavn")
     try:
         hw = await asyncio.to_thread(system.hardware)
-        return {"ok": True, "tags": [{**t, **system.rate(t["size_gb"], hw)} for t in await library.tags(name)]}
+        return {"ok": True, "tags": [{**t, **system.rate(t["size_gb"], hw, t["tag"])} for t in await library.tags(name)]}
     except Exception as e:
         return {"ok": False, "error": f"Kunne ikke hente versjoner ({e})", "tags": []}
 

@@ -57,3 +57,29 @@ if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
             f(); print("OK", n)
+
+
+def test_calibration_uses_measured_speed():
+    system.set_calibration({}, LAPTOP)
+    assert system.rate(1.9, LAPTOP)["basis"] == "estimate"
+    # måling: 3B-modell (1.9 GB) gir 40 tok/s => K = 76
+    system.set_calibration({"a:3b": {"tps": 40, "size_gb": 1.9}}, LAPTOP)
+    r = system.rate(1.9, LAPTOP, "a:3b")
+    assert r["basis"] == "measured" and r["level"] == "green" and r["tps"] == 40
+    small = system.rate(0.8, LAPTOP)           # estimert raskere enn målt modell
+    assert small["basis"] == "predicted" and small["tps"] > 40
+    # for stor for minnet forblir rød selv om K er høy
+    assert system.rate(20, LAPTOP)["level"] == "red"
+    # treg maskin: 3B gir 3 tok/s => rød selv om den "passer"
+    system.set_calibration({"a:3b": {"tps": 3, "size_gb": 1.9}}, LAPTOP)
+    assert system.rate(1.9, LAPTOP, "a:3b")["level"] == "red"
+    assert system.rate(0.8, LAPTOP)["level"] in ("yellow", "green")
+    system.set_calibration({}, LAPTOP)
+
+
+def test_spilled_model_prediction_slower():
+    system.set_calibration({"a:3b": {"tps": 40, "size_gb": 1.9}}, LAPTOP)
+    fit = system.rate(1.9, LAPTOP)["tps"]
+    spill = system.rate(4.7, LAPTOP)           # 7-8B: deles mellom GPU og RAM
+    assert spill["basis"] == "predicted" and spill["tps"] < fit / 2
+    system.set_calibration({}, LAPTOP)

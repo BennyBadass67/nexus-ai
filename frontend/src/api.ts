@@ -26,7 +26,8 @@ export type Prefs = { agent_name: string; user_name: string; persona: string; th
 export const api = {
   prefs: () => j<Prefs>("/api/settings"),
   savePrefs: (p: Partial<Prefs>) => j<Prefs>("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) }),
-  recommendations: () => j<{ ok: boolean; error?: string; hardware: HW; topics: Topic[] }>("/api/recommendations"),
+  benchAuto: () => j<{ measured: Bench[]; errors: Record<string, string>; remaining: number }>("/api/benchmark/auto", { method: "POST" }),
+  recommendations: () => j<{ ok: boolean; error?: string; hardware: HW; topics: Topic[]; calibrated?: boolean; measured_models?: string[] }>("/api/recommendations"),
   system: (refresh = false) => j<HW>(`/api/system?refresh=${refresh}`),
   benchmarks: () => j<Record<string, Bench & { at: number }>>("/api/benchmark"),
   benchmark: (model: string) => j<Bench>("/api/benchmark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model }) }),

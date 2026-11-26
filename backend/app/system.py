@@ -112,7 +112,7 @@ def hardware(refresh: bool = False) -> Hardware:
 OVERHEAD = 1.25  # kontekst/KV-cache og runtime kommer oppå filstørrelsen
 
 
-def rate(size_gb: float, hw: Hardware) -> dict:
+def _static_rate(size_gb: float, hw: Hardware) -> dict:
     """green = passer og går raskt, yellow = går men tregt/tungt, red = for stor."""
     need = size_gb * OVERHEAD
     if hw.vram_gb > 0 and hw.gpu_vendor == "nvidia":
@@ -127,6 +127,50 @@ def rate(size_gb: float, hw: Hardware) -> dict:
     if need <= hw.ram_gb * 0.55:
         return {"level": "yellow", "reason": "Går, men merkbart tregt uten kraftig GPU."}
     return {"level": "red", "reason": f"For stor for {hw.ram_gb:g} GB RAM."}
+
+
+# --- Kalibrering mot ekte målinger -----------------------------------------------------------
+# Tokens/sek er i praksis minnebåndbredde / modellstørrelse. Hver måling gir derfor "effektiv båndbredde"
+# K = tps * størrelse (GB/s) for akkurat denne maskinen. Andre modeller estimeres som K / størrelse.
+GREEN_TPS, YELLOW_TPS = 12.0, 5.0
+SPILL_FACTOR = 0.35   # modell som må deles mellom GPU og RAM går mye tregere enn en som passer i GPU
+CAL: dict = {"k": None, "measured": {}, "n": 0}
+
+
+def set_calibration(rows: dict, hw: Hardware) -> None:
+    """rows: {modellnavn: {"tps": float, "size_gb": float}}"""
+    ks, measured = [], {}
+    for name, r in rows.items():
+        tps, gb = r.get("tps") or 0, r.get("size_gb") or 0
+        if tps <= 0 or gb <= 0:
+            continue
+        measured[name] = tps
+        regime = SPILL_FACTOR if _static_rate(gb, hw)["level"] == "yellow" else 1.0
+        ks.append(tps * gb / regime)
+    ks.sort()
+    CAL["k"] = ks[len(ks) // 2] if ks else None
+    CAL["measured"], CAL["n"] = measured, len(ks)
+
+
+def _level(tps: float) -> str:
+    return "green" if tps >= GREEN_TPS else "yellow" if tps >= YELLOW_TPS else "red"
+
+
+def rate(size_gb: float, hw: Hardware, model: str | None = None) -> dict:
+    """Grønn/gul/rød. Med målinger: bygger på målt eller estimert tokens/sek. Uten: størrelse mot minne."""
+    base = _static_rate(size_gb, hw)
+    k = CAL["k"]
+    if k is None:
+        return {**base, "basis": "estimate"}
+    if base["level"] == "red":
+        return {**base, "basis": "memory"}          # får ikke plass: hastighet hjelper ikke
+    if model and model in CAL["measured"]:
+        tps = CAL["measured"][model]
+        return {"level": _level(tps), "tps": round(tps, 1), "basis": "measured",
+                "reason": f"Målt på din PC: {tps:.0f} tokens/sek."}
+    tps = k / max(size_gb, 0.05) * (SPILL_FACTOR if base["level"] == "yellow" else 1.0)
+    return {"level": _level(tps), "tps": round(tps, 1), "basis": "predicted",
+            "reason": f"Estimert ca. {tps:.0f} tokens/sek ut fra målingene dine."}
 
 
 def est_size_from_params(label: str) -> Optional[float]:
@@ -161,7 +205,7 @@ def pick(tags_by_family: dict[str, list[dict]], hw: Hardware) -> dict | None:
         for t in tags:
             if not _PLAIN.match(t["tag"]):
                 continue
-            r = rate(t["size_gb"], hw)
+            r = rate(t["size_gb"], hw, t["tag"])
             cands.append({**t, **r, "family": fam, "fam_rank": fam_rank})
     greens = [c for c in cands if c["level"] == "green"]
     if greens:

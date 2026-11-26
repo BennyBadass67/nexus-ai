@@ -50,15 +50,17 @@ function Installed() {
 
 function Recommended({ goBrowse }: { goBrowse: () => void }) {
   const { models, pulls, pull, setModel } = useApp();
-  const [data, setData] = useState<{ ok: boolean; error?: string; hardware: HW; topics: Topic[] } | null>(null);
+  const [data, setData] = useState<{ ok: boolean; error?: string; hardware: HW; topics: Topic[]; calibrated?: boolean; measured_models?: string[] } | null>(null);
   const [bench, setBench] = useState<Record<string, Bench>>({});
   const [running, setRunning] = useState("");
   const [berr, setBerr] = useState("");
   const have = new Set(models?.models.map((m) => m.name) ?? []);
-  useEffect(() => { api.recommendations().then(setData).catch((e) => setData({ ok: false, error: String(e), hardware: null as unknown as HW, topics: [] })); api.benchmarks().then(setBench).catch(() => {}); }, []);
+  const load = () => api.recommendations().then(setData).catch((e) => setData({ ok: false, error: String(e), hardware: null as unknown as HW, topics: [] }));
+  useEffect(() => { load(); api.benchmarks().then(setBench).catch(() => {}); }, []);
   const hw = data?.hardware;
-  const runBench = async (m: string) => { setRunning(m); setBerr(""); try { const r = await api.benchmark(m); setBench((b) => ({ ...b, [m]: r })); } catch (e: any) { setBerr(String(e.message || e)); } setRunning(""); };
+  const runBench = async (m: string) => { setRunning(m); setBerr(""); try { const r = await api.benchmark(m); setBench((b) => ({ ...b, [m]: r })); load(); } catch (e: any) { setBerr(String(e.message || e)); } setRunning(""); };
   const installed = models?.models ?? [];
+  const measureAll = async () => { setRunning("alle"); setBerr(""); try { await api.benchAuto(); setBench(await api.benchmarks()); await load(); } catch (e: any) { setBerr(String(e.message || e)); } setRunning(""); };
   return (
     <div className="space-y-5">
       <div className="glass-soft rounded-3xl p-5">
@@ -77,7 +79,9 @@ function Recommended({ goBrowse }: { goBrowse: () => void }) {
             installed.slice(0, 4).map((m) => (
               <button key={m.name} disabled={!!running} onClick={() => runBench(m.name)} className="btn-ghost flex items-center gap-2 !py-1.5 text-xs">
                 {running === m.name ? "Måler…" : m.name}{bench[m.name] && running !== m.name && <span className="rounded-md bg-nx-blue/20 px-1.5 text-nx-ice">{bench[m.name].tps} tok/s</span>}</button>))}
+          {installed.length > 0 && <button disabled={!!running} onClick={measureAll} className="btn-primary !py-1.5 text-xs">{running === "alle" ? "Måler…" : "Mål installerte modeller"}</button>}
           {berr && <span className="text-xs text-rose-300">{berr}</span>}
+          <div className="w-full text-xs text-white/45">{data?.calibrated ? `Fargene bygger på ${data.measured_models?.length} faktisk måling(er) av tokens/sek på denne PC-en. Andre modeller er estimert ut fra målingene.` : "Ikke målt ennå: fargene er et første anslag fra minne og GPU. Mål en modell for å få ekte tall."}</div>
         </div>
       </div>
       {data && !data.ok && <div className="rounded-2xl bg-amber-500/10 p-3 text-sm text-amber-200">Kunne ikke hente anbefalinger fra ollama.com ({data.error}). Du kan fortsatt søke under «Last ned».</div>}

@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Nytt i 0.3.0: Tilpass-siden med tema (Mørk, Midnatt, Lys), aksentfarge, agentens navn og personlighet. Eksisterende installasjoner oppdateres automatisk."
+          releaseBody: "Nytt i 0.4.0: anbefalinger og grønn/gul/rød bygger nå på ekte målt tokens per sekund på din PC. Appen måler modellene dine og estimerer resten ut fra målingene. Eksisterende installasjoner oppdateres automatisk."
           releaseDraft: false
           prerelease: false

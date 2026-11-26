@@ -46,7 +46,7 @@ export function Provider({ children }: { children: ReactNode }) {
     setPulls((p) => ({ ...p, [name]: { status: "starter…" } }));
     streamPull(name, (u) => setPulls((p) => ({ ...p, [name]: { ...p[name], ...u } })), ac.signal)
       .catch((e) => { if (e.name !== "AbortError") setPulls((p) => ({ ...p, [name]: { status: "", error: String(e.message || e) } })); else setPulls((p) => { const { [name]: _, ...rest } = p; return rest; }); })
-      .finally(() => { delete aborts.current[name]; refresh();
+      .finally(() => { delete aborts.current[name]; refresh(); api.benchAuto().catch(() => {});
         setTimeout(() => setPulls((p) => (p[name]?.done ? (({ [name]: _, ...r }) => r)(p) : p)), 3000); });
   };
   const cancelPull = (name: string) => aborts.current[name]?.abort();
