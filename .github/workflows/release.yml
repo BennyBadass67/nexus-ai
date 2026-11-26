@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Nytt i 0.5.0: Agent-modus (skiftenøkkelen i Assistant). Agenten kan lese og søke i filer, søke på nettet, lese nettsider og åpne filer, nettsider og kjente programmer. Skriving og sletting (til papirkurven) krever din godkjenning. Stopp-knapp og Activity-logg. Eksisterende installasjoner oppdateres automatisk."
+          releaseBody: "Nytt i 0.6.0: Agents-siden. Lag egne agenter (rolle, modell, verktøy) og rom der flere agenter snakker sammen, rund for rund eller med leder. Maks runder, Stopp-knapp, modeller kjøres én og én for lite RAM. Eksempelrom med tre agenter."
           releaseDraft: false
           prerelease: false
