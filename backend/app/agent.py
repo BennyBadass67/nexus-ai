@@ -37,7 +37,7 @@ def agent_system(base: str, roots: list[str], native: bool, allowed: set[str] | 
          "Du kan ikke kjøre kommandoer, installere programmer eller endre systeminnstillinger. "
          "Når du har nok informasjon, svar brukeren kort og tydelig. Ikke finn på resultater du ikke har fått fra et verktøy.")
     if not native:
-        spec = "\n".join(f"- {t.name}({', '.join(t.params)}): {t.description}" for t in tools.TOOLS.values() if allowed is None or t.name in allowed)
+        spec = "\n".join(f"- {t.name}({', '.join(t.params)}): {t.description}" for t in tools.TOOLS.values() if t.available and (allowed is None or t.name in allowed))
         s += ("\n\nVerktøy:\n" + spec + "\n\nFor å bruke et verktøy, svar med KUN én linje på formen:\n"
               'TOOL: {"name": "verktøynavn", "args": {"argument": "verdi"}}\n'
               "Du får resultatet tilbake. Når du er ferdig, svar med vanlig tekst uten TOOL:.")
@@ -65,7 +65,7 @@ async def run_agent(run: Run, model: str, messages: list[dict], base_system: str
     """Gir hendelser: token, tool_call, approval, tool_result, stats, error, final."""
     roots = tools.get_roots()
     native = not force_text_mode
-    schemas = [t.schema() for t in tools.TOOLS.values() if allowed is None or t.name in allowed]
+    schemas = [t.schema() for t in tools.TOOLS.values() if t.available and (allowed is None or t.name in allowed)]
     convo = [{"role": "system", "content": agent_system(base_system, roots, native, allowed)}] + messages
     log(run.id, "run", detail=f"Start med {model}", status="start")
 

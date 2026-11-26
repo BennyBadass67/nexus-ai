@@ -31,9 +31,9 @@ SYSTEM_PROMPT = (
 HISTORY_LIMIT = 30
 
 PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
-                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on"}
+                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off"}
 PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
-PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}}
 
 
 def get_prefs() -> dict:
@@ -226,6 +226,17 @@ async def agent_run(req: AgentRunReq):
         yield _ev(type="done")
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+@app.get("/api/screen/last")
+def screen_last():
+    """Siste skjermbilde agenten tok (lagret bare lokalt), så brukeren kan se hva modellen så."""
+    from fastapi.responses import FileResponse
+    from . import screen
+    p = screen.last_path()
+    if not p.exists():
+        raise HTTPException(404, "Ingen skjermbilder tatt ennå")
+    return FileResponse(p, media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/agent/{run_id}/approve")

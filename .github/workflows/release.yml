@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.8.2: Team-bygger velger modell per agent (PC + oppgave) og laster ned manglende modeller. Designmodell (qwen2.5:3b) lastes ned automatisk. Bedre kontrast (WCAG AA) i alle temaer. Kraftigere ikon-oppdatering etter installasjon (sletter iconcache, starter Utforsker på nytt)."
+          releaseBody: "0.9.0: Skjermstyring (fase 3). Agenter kan se skjermen (lokal visjonsmodell) og styre mus og tastatur, med godkjenning for hver handling. Av som standard, slås på i Innstillinger. Nødstopp: musen i øvre venstre hjørne."
           releaseDraft: false
           prerelease: false

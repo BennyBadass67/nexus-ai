@@ -183,3 +183,6 @@ html.glass .btn-primary { background: #1d1411; } html.glass .btn-primary, html.g
 html.light .text-emerald-600, html.light .text-emerald-500, html.light .text-emerald-400 { color: #047857; }
 html:not(.light) .text-emerald-600 { color: #34d399; }
 html:not(.light) .text-nx-blue { color: rgb(var(--accent-hi)); }
+html.light [class*="text-amber-"] { color: #92400e; }
+html.light [class*="text-rose-"] { color: #9f1239; }
+html.light [class*="text-emerald-300"], html.light [class*="text-emerald-200"] { color: #047857; }

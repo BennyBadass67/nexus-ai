@@ -69,6 +69,20 @@ export default function SettingsPage() {
           Introanimasjon når appen åpnes</label>
       </Sec>
 
+      <Sec t="Skjermstyring" d="La agenter se skjermen og styre mus og tastatur. Alt skjer lokalt på PC-en, og ingenting sendes ut.">
+        <label className="flex cursor-pointer items-center gap-3 text-sm">
+          <input type="checkbox" checked={prefs.screen_control === "on"} onChange={(e) => setPrefs({ screen_control: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
+          Tillat agenten å bruke skjerm, mus og tastatur</label>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-white/55">
+          <li>Hver handling (skjermbilde, klikk, skriving, tast) må godkjennes av deg i chatten før den utføres.</li>
+          <li>Nødstopp: flytt musepekeren til øvre venstre hjørne av skjermen, så avbrytes alt. Du kan også trykke Stopp i chatten.</li>
+          <li>Maks 30 handlinger i minuttet. Windows-tasten, Alt+F4 og Ctrl+Alt+Delete er blokkert.</li>
+          <li>Agenten rører ikke vinduer som ser ut som passord, BankID eller innlogging.</li>
+          <li>Skjermbilder beskrives av en lokal visjonsmodell (last ned moondream under Models) og lagres bare på PC-en.</li></ul>
+        <img src="/api/screen/last" alt="" className="mt-3 hidden max-h-40 rounded-xl" onLoad={(e) => e.currentTarget.classList.remove("hidden")} />
+        <div className="mt-1 text-[11px] text-white/40">Over: siste skjermbilde agenten tok (vises bare hvis det finnes).</div>
+      </Sec>
+
       <Sec t="Din agent" d="Navn og personlighet. Teksten under sendes som instruks til modellen i hver samtale.">
         <div className="grid gap-3 md:grid-cols-2">
           <div><div className="mb-1 text-xs text-white/50">Agentens navn</div><input className={field} maxLength={24} value={name} onChange={(e) => setName(e.target.value)} /></div>

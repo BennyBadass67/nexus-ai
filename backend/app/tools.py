@@ -298,6 +298,19 @@ def web_search(a: dict) -> str:
     return "\n\n".join(f"{i+1}. {x['title']}\n{x['url']}\n{x['snippet']}" for i, x in enumerate(res))
 
 
+# ---------- skjermstyring (fase 3) ----------
+
+def _scr(name: str) -> Callable[[dict], str]:
+    from . import screen
+
+    def run(a: dict) -> str:
+        try:
+            return getattr(screen, name)(a)
+        except screen.ScreenError as e:
+            raise ToolError(str(e))
+    return run
+
+
 # ---------- register ----------
 
 @dataclass
@@ -310,7 +323,14 @@ class Tool:
 
     @property
     def needs_approval(self) -> bool:
-        return self.risk in ("write", "delete")
+        return self.risk in ("write", "delete", "screen", "control")
+
+    @property
+    def available(self) -> bool:
+        if self.risk in ("screen", "control"):
+            from . import screen
+            return screen.enabled()
+        return True
 
     def schema(self) -> dict:
         props = {k: {"type": v[0], "description": v[1]} for k, v in self.params.items()}
@@ -337,12 +357,25 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool("write_file", "Skriver en tekstfil. Krever brukerens godkjenning.",
          {"path": (S, "Filsti", True), "content": (S, "Innhold", True), "overwrite": ("boolean", "Erstatt hvis den finnes", False)}, "write", write_file),
     Tool("delete_path", "Flytter en fil eller mappe til papirkurven. Krever brukerens godkjenning.", {"path": (S, "Sti", True)}, "delete", delete_path),
+    Tool("screen_look", "Tar et skjermbilde og beskriver det (lokal modell). Gir også skjermstørrelse og liste over åpne vinduer. Krever godkjenning.",
+         {"question": (S, "Valgfritt spørsmål om skjermen", False)}, "screen", _scr("screen_look")),
+    Tool("focus_window", "Bytter til et åpent vindu der tittelen inneholder teksten. Foretrekk dette og tastatur framfor museklikk. Krever godkjenning.",
+         {"title": (S, "Del av vindustittelen", True)}, "control", _scr("focus_window")),
+    Tool("mouse_click", "Klikker med musen på skjermkoordinat (x,y) i hele skjermens piksler. Krever godkjenning.",
+         {"x": ("integer", "x-piksel", True), "y": ("integer", "y-piksel", True), "button": (S, "left eller right", False), "double": ("boolean", "Dobbeltklikk", False)}, "control", _scr("mouse_click")),
+    Tool("scroll", "Ruller musehjulet (positivt opp, negativt ned, maks 20). Krever godkjenning.", {"amount": ("integer", "Antall steg", True)}, "control", _scr("scroll")),
+    Tool("type_text", "Skriver tekst med tastaturet i det aktive vinduet (maks 500 tegn). Krever godkjenning.", {"text": (S, "Teksten", True)}, "control", _scr("type_text")),
+    Tool("press_key", "Trykker en tast eller kombinasjon, f.eks. enter, tab, ctrl+c, alt+tab, ctrl+shift+n. Windows-tasten og Alt+F4 er blokkert. Krever godkjenning.",
+         {"keys": (S, "Tastekombinasjon", True)}, "control", _scr("press_key")),
 ]}
 
 
 def describe(name: str, args: dict) -> str:
     """Kort, ærlig beskrivelse av hva som skjer, vist i godkjenningsboksen."""
     a = args or {}
+    if name in ("screen_look", "focus_window", "mouse_click", "scroll", "type_text", "press_key"):
+        from . import screen
+        return screen.describe(name, a)
     return {"write_file": f"Skrive filen {a.get('path')} ({len(str(a.get('content', '')))} tegn)",
             "delete_path": f"Flytte {a.get('path')} til papirkurven",
             "open_app": f"Åpne programmet {a.get('name')}", "open_url": f"Åpne {a.get('url')} i nettleseren",
@@ -353,6 +386,8 @@ def describe(name: str, args: dict) -> str:
 
 def run_tool(name: str, args) -> str:
     t = TOOLS.get(name)
+    if t and not t.available:
+        raise ToolError("Skjermstyring er av. Brukeren må slå den på i Innstillinger.")
     if not t:
         raise ToolError(f"Ukjent verktøy «{name}». Tilgjengelige: " + ", ".join(TOOLS))
     if isinstance(args, str):

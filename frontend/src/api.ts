@@ -22,7 +22,7 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
-export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string };
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off" };
 
 export type AgentDef = { id: number; name: string; role: string; prompt: string; model: string | null; tools: string[] };
 export type Room = { id: number; title: string; agent_ids: number[]; max_rounds: number; mode: "roundrobin" | "leader" };

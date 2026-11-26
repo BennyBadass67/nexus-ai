@@ -1,7 +1,7 @@
-import { Check, X, ShieldAlert, Loader2, Wrench, FolderOpen, Globe, FileText, Trash2 } from "lucide-react";
+import { Check, X, ShieldAlert, Loader2, Wrench, FolderOpen, Globe, FileText, Trash2, Monitor, MousePointerClick, Keyboard } from "lucide-react";
 import { api, Step } from "../api";
 
-const ICON: Record<string, typeof Wrench> = { read_file: FileText, list_dir: FolderOpen, search_files: FolderOpen, web_search: Globe, fetch_url: Globe, open_url: Globe, write_file: FileText, delete_path: Trash2 };
+const ICON: Record<string, typeof Wrench> = { read_file: FileText, list_dir: FolderOpen, search_files: FolderOpen, web_search: Globe, fetch_url: Globe, open_url: Globe, write_file: FileText, delete_path: Trash2, screen_look: Monitor, focus_window: Monitor, mouse_click: MousePointerClick, scroll: MousePointerClick, type_text: Keyboard, press_key: Keyboard };
 
 export default function Steps({ steps, runId, onChange }: { steps: Step[]; runId: string | null; onChange: (id: string, s: Partial<Step>) => void }) {
   const decide = async (st: Step, allow: boolean) => {
@@ -25,7 +25,7 @@ export default function Steps({ steps, runId, onChange }: { steps: Step[]; runId
             {st.status === "waiting" && (
               <div className="mt-2.5 flex items-center gap-2">
                 <ShieldAlert size={14} className="flex-none text-amber-300" />
-                <span className="flex-1 text-xs text-amber-100/90">{risky && st.risk === "delete" ? "Agenten vil flytte dette til papirkurven. Tillat?" : "Agenten vil gjøre en endring på PC-en. Tillat?"}</span>
+                <span className="flex-1 text-xs text-amber-100/90">{st.risk === "screen" ? "Agenten vil se skjermen din (lokalt). Tillat?" : st.risk === "control" ? "Agenten vil styre mus/tastatur på PC-en. Tillat?" : risky && st.risk === "delete" ? "Agenten vil flytte dette til papirkurven. Tillat?" : "Agenten vil gjøre en endring på PC-en. Tillat?"}</span>
                 <button className="btn-ghost !py-1 text-xs" onClick={() => decide(st, false)}>Avslå</button>
                 <button className="btn-primary !py-1 text-xs" onClick={() => decide(st, true)}>Tillat</button>
               </div>)}

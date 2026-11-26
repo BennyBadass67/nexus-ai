@@ -75,7 +75,7 @@ class Proposal(BaseModel):
 
 
 def _system_prompt() -> str:
-    tl = "\n".join(f"- {t.name}: {t.description}" for t in tools.TOOLS.values() if t.name not in ("open_app", "open_path", "open_url"))
+    tl = "\n".join(f"- {t.name}: {t.description}" for t in tools.TOOLS.values() if t.name not in ("open_app", "open_path", "open_url") and t.risk not in ("screen", "control"))
     return ("Du setter sammen et team av 2 til 5 KI-agenter som skal snakke sammen for å løse brukerens oppgave. "
             "Gi hver agent et kort navn (ett ord), en rolle (en setning) og en instruks (2-4 setninger om hvordan den skal oppføre seg og hva den skal levere). "
             "Agentene skal utfylle hverandre, ikke gjøre det samme. Svar på norsk. "
