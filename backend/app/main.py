@@ -3,12 +3,15 @@ import json
 import logging
 import re
 
+from typing import Optional
+
 import httpx
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import config, db, library, ollama, system
+from . import agent, config, db, library, ollama, system, tools
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
@@ -155,6 +158,107 @@ async def chat(req: ChatRequest):
         yield _ev(type="done")
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+class AgentRunReq(BaseModel):
+    message: str = Field(min_length=1, max_length=20000)
+    model: str = Field(min_length=1)
+    conversation_id: Optional[int] = None
+    text_mode: bool = False
+
+
+class ApproveReq(BaseModel):
+    call_id: str
+    allow: bool
+
+
+@app.post("/api/agent/run")
+async def agent_run(req: AgentRunReq):
+    """Agent-modus: strømmer meta, token, tool_call, approval, tool_result, final | error | stopped, done."""
+    with db.conn() as c:
+        cid = req.conversation_id
+        if cid is None:
+            cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at) VALUES(?,?,?,?)",
+                            (req.message.strip().replace("\n", " ")[:48], req.model, db.now(), db.now())).lastrowid
+        elif not c.execute("SELECT 1 FROM conversations WHERE id=?", (cid,)).fetchone():
+            raise HTTPException(404, "Samtalen finnes ikke")
+        c.execute("INSERT INTO messages(conversation_id,role,content,created_at) VALUES(?,?,?,?)",
+                  (cid, "user", req.message, db.now()))
+        hist = c.execute("SELECT role,content FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT ?",
+                         (cid, HISTORY_LIMIT)).fetchall()
+    run = agent.Run()
+    agent.RUNS[run.id] = run
+    msgs = [dict(r) for r in reversed(hist)]
+
+    async def gen():
+        yield _ev(type="meta", conversation_id=cid, model=req.model, run_id=run.id, provider="ollama")
+        final = ""
+        try:
+            async for e in agent.run_agent(run, req.model, msgs, build_system_prompt(get_prefs()), req.text_mode):
+                if e["type"] == "token":
+                    final += e["text"]
+                elif e["type"] == "final":
+                    final = e["text"]
+                yield _ev(**e)
+        except asyncio.CancelledError:
+            run.stop.set()
+            raise
+        except Exception as e:
+            log.exception("agent failed")
+            yield _ev(type="error", message=str(e))
+        finally:
+            run.stop.set()
+            agent.RUNS.pop(run.id, None)
+            if final.strip():
+                with db.conn() as c:
+                    c.execute("INSERT INTO messages(conversation_id,role,content,model,created_at) VALUES(?,?,?,?,?)",
+                              (cid, "assistant", final, req.model, db.now()))
+                    c.execute("UPDATE conversations SET updated_at=?, model=? WHERE id=?", (db.now(), req.model, cid))
+        yield _ev(type="done")
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+@app.post("/api/agent/{run_id}/approve")
+def agent_approve(run_id: str, req: ApproveReq):
+    run = agent.RUNS.get(run_id)
+    fut = run.pending.get(req.call_id) if run else None
+    if not fut or fut.done():
+        raise HTTPException(404, "Ingen ventende godkjenning")
+    fut.set_result(bool(req.allow))
+    return {"ok": True}
+
+
+@app.post("/api/agent/{run_id}/stop")
+def agent_stop(run_id: str):
+    run = agent.RUNS.get(run_id)
+    if not run:
+        return {"ok": True, "already_finished": True}
+    run.stop.set()
+    return {"ok": True}
+
+
+@app.get("/api/agent/config")
+def agent_config():
+    return {"roots": tools.get_roots(),
+            "tools": [{"name": t.name, "description": t.description, "risk": t.risk, "needs_approval": t.needs_approval}
+                      for t in tools.TOOLS.values()]}
+
+
+@app.put("/api/agent/config")
+def agent_config_put(body: dict):
+    try:
+        roots = tools.set_roots([str(x) for x in body.get("roots", [])])
+    except tools.ToolError as e:
+        raise HTTPException(422, str(e))
+    return {"roots": roots}
+
+
+@app.get("/api/activity")
+def activity(limit: int = 100):
+    with db.conn() as c:
+        rows = c.execute("SELECT * FROM activity ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()
+    return [dict(r) for r in rows]
 
 
 @app.get("/api/system")

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil } from "lucide-react";
-import { api, Conv, Msg, streamChat } from "../api";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench } from "lucide-react";
+import { api, Conv, Msg, Step, streamAgent, streamChat } from "../api";
+import Steps from "../components/Steps";
 import { useApp } from "../store";
 import Markdown from "../components/Markdown";
 
@@ -14,6 +15,11 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const tokBuf = useRef(""); const tokTimer = useRef<number | null>(null);
   const flushTok = () => { tokTimer.current = null; const t = tokBuf.current; tokBuf.current = ""; if (!t) return;
     setMsgs((m) => { const c = [...m]; const l = c[c.length - 1]; if (!l) return m; c[c.length - 1] = { ...l, content: l.content + t }; return c; }); };
+  const [agentMode, setAgentModeS] = useState(localStorage.getItem("nexus.agent") === "1");
+  const setAgentMode = (v: boolean) => { localStorage.setItem("nexus.agent", v ? "1" : "0"); setAgentModeS(v); };
+  const runId = useRef<string | null>(null);
+  const [notice, setNotice] = useState("");
+  const patchStep = (id: string, p: Partial<Step>) => setMsgs((m) => m.map((x) => (x.steps ? { ...x, steps: x.steps.map((st) => (st.call_id === id ? { ...st, ...p } : st)) } : x)));
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -43,7 +49,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
 
   const run = async (message: string, regenerate = false) => {
     if (!model) { setErr("Ingen modell valgt. Last ned en under Models."); return; }
-    setErr(""); setBusy(true); stick.current = true;
+    setErr(""); setNotice(""); setBusy(true); stick.current = true; runId.current = null;
     setMsgs((m) => {
       const base = regenerate && m[m.length - 1]?.role === "assistant" ? m.slice(0, -1) : [...m, { role: "user" as const, content: message }];
       return [...base, { role: "assistant", content: "", model }];
@@ -51,12 +57,19 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
     abort.current = new AbortController();
     let id = cid;
     try {
-      await streamChat({ message, model, conversation_id: cid, regenerate }, (e) => {
-        if (e.type === "meta") { id = e.conversation_id; setCid(e.conversation_id); }
+      const handler = (e: import("../api").ChatEvent) => {
+        if (e.type === "meta") { id = e.conversation_id; setCid(e.conversation_id); runId.current = e.run_id ?? null; }
         else if (e.type === "token") { tokBuf.current += e.text; if (!tokTimer.current) tokTimer.current = window.setTimeout(flushTok, 100); }
         else if (e.type === "stats") { if (tokTimer.current) clearTimeout(tokTimer.current); flushTok(); setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], tps: e.tokens / Math.max(e.seconds, 0.01) }; return c; }); }
+        else if (e.type === "tool_call") { flushTok(); setMsgs((m) => { const c = [...m]; const l = c[c.length - 1]; c[c.length - 1] = { ...l, steps: [...(l.steps ?? []), { call_id: e.call_id, tool: e.tool, describe: e.describe, risk: e.risk, status: e.needs_approval ? "waiting" : "running" }] }; return c; }); }
+        else if (e.type === "tool_result") patchStep(e.call_id, { status: e.status, result: e.result });
+        else if (e.type === "notice") setNotice(e.text);
+        else if (e.type === "final") { if (tokTimer.current) clearTimeout(tokTimer.current); tokBuf.current = ""; setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], content: e.text }; return c; }); }
+        else if (e.type === "stopped") setErr("Stoppet. Ingenting mer ble gjort.");
         else if (e.type === "error") setErr(e.message);
-      }, abort.current.signal);
+      };
+      if (agentMode && !regenerate) await streamAgent({ message, model, conversation_id: cid }, handler, abort.current.signal);
+      else await streamChat({ message, model, conversation_id: cid, regenerate }, handler, abort.current.signal);
     } catch (e: any) { if (e.name !== "AbortError") setErr(String(e.message || e)); }
     finally {
       if (tokTimer.current) clearTimeout(tokTimer.current); flushTok();
@@ -109,6 +122,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
                 <div key={i} className="group flex animate-rise gap-3">
                   <div className="mt-0.5 grid h-8 w-8 flex-none place-items-center rounded-xl bg-white/10"><Sparkles size={15} className="text-nx-blue" /></div>
                   <div className="min-w-0 flex-1 text-[15px] leading-[1.7] text-white/90">
+                    {m.steps && m.steps.length > 0 && <Steps steps={m.steps} runId={runId.current} onChange={patchStep} />}
                     {m.content ? <div className={busy && last ? "cursor" : ""}><Markdown text={m.content} /></div> : <div className="flex gap-1.5 py-2.5">{[0, 1, 2].map((d) => <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-white/40" style={{ animationDelay: `${d * 120}ms` }} />)}</div>}
                     {m.content && !(busy && last) && (
                       <div className="mt-2 flex items-center gap-3 text-[11px] text-white/35 opacity-0 transition group-hover:opacity-100">
@@ -122,12 +136,15 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
             })}
           </div>
         </div>
+        {notice && <div className="mx-6 mb-2 rounded-xl bg-amber-400/10 px-4 py-2 text-xs text-amber-100">{notice}</div>}
         {err && <div className="mx-6 mb-2 animate-pop rounded-xl bg-rose-500/12 px-4 py-2.5 text-sm text-rose-200 ring-1 ring-rose-400/20">{err}</div>}
         <div className="px-6 pb-5">
           <div className="glass-soft mx-auto flex max-w-3xl items-end gap-2 rounded-[22px] p-2 pl-4 transition focus-within:ring-1 focus-within:ring-nx-blue/50">
             <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={`Skriv til ${prefs.agent_name}…`} autoFocus
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               className="max-h-44 min-h-[40px] flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-white/30" />
+            <button onClick={() => setAgentMode(!agentMode)} title={agentMode ? "Agent-modus er på: kan bruke filer og nett" : "Slå på agent-modus"}
+              className={`grid h-10 w-10 place-items-center rounded-xl transition ${agentMode ? "bg-nx-blue/25 text-nx-ice ring-1 ring-nx-blue/60" : "text-white/45 hover:bg-white/10"}`}><Wrench size={16} /></button>
             <div className="relative">
               <button onClick={() => setPick((v) => !v)} className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs text-white/60 transition hover:bg-white/10">
                 <span className="max-w-[120px] truncate">{model || "ingen modell"}</span><ChevronDown size={13} /></button>
@@ -144,10 +161,10 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
                 </div></>)}
             </div>
             {busy
-              ? <button className="btn-primary grid h-10 w-10 place-items-center !p-0" title="Stopp" onClick={() => abort.current?.abort()}><Square size={14} fill="currentColor" /></button>
+              ? <button className="btn-primary grid h-10 w-10 place-items-center !p-0" title="Stopp" onClick={() => { if (runId.current) api.stopRun(runId.current).catch(() => {}); else abort.current?.abort(); }}><Square size={14} fill="currentColor" /></button>
               : <button className="btn-primary grid h-10 w-10 place-items-center !p-0" title="Send" disabled={!text.trim()} onClick={send}><ArrowUp size={18} strokeWidth={2.5} /></button>}
           </div>
-          <div className="mt-2 text-center text-[11px] text-white/30">Lokal modell · samtalen forlater aldri PC-en</div>
+          <div className="mt-2 text-center text-[11px] text-white/30">{agentMode ? "Agent-modus: kan lese filer og søke på nettet (søkeord sendes til DuckDuckGo). Skriving og sletting krever din godkjenning." : "Lokal modell · samtalen forlater aldri PC-en"}</div>
         </div>
       </section>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, MoonStar, Check } from "lucide-react";
+import { api, ToolInfo } from "../api";
 import { useApp } from "../store";
 
 const ACCENTS = ["#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
@@ -20,6 +21,9 @@ export default function SettingsPage() {
   const [persona, setPersona] = useState(prefs.persona);
   const [saved, setSaved] = useState(false);
   useEffect(() => { setName(prefs.agent_name); setUser(prefs.user_name); setPersona(prefs.persona); }, [prefs.agent_name, prefs.user_name, prefs.persona]);
+  const [roots, setRoots] = useState(""); const [tl, setTl] = useState<ToolInfo[]>([]); const [rootMsg, setRootMsg] = useState("");
+  useEffect(() => { api.agentConfig().then((c) => { setRoots(c.roots.join("\n")); setTl(c.tools); }).catch(() => {}); }, []);
+  const saveRoots = async () => { try { const r = await api.saveRoots(roots.split("\n").map((x) => x.trim()).filter(Boolean)); setRoots(r.roots.join("\n")); setRootMsg("Lagret."); } catch (e: any) { setRootMsg(String(e.message || e).replace(/^\d+ /, "")); } setTimeout(() => setRootMsg(""), 4000); };
   const dirty = name !== prefs.agent_name || user !== prefs.user_name || persona !== prefs.persona;
   const save = () => { setPrefs({ agent_name: name.trim() || "NEXUS", user_name: user.trim() || "Benjamin", persona }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   const field = "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-nx-blue/60";
@@ -60,6 +64,15 @@ export default function SettingsPage() {
           placeholder="F.eks. «Svar alltid på norsk, vær litt sarkastisk, og avslutt med et tips.»" />
         <div className="mt-3 flex items-center gap-3"><button className="btn-primary" disabled={!dirty} onClick={save}>Lagre</button>
           {saved && <span className="animate-fade text-sm text-emerald-300">Lagret. Gjelder fra neste melding.</span>}</div>
+      </Sec>
+
+      <Sec t="PC-kontroll (agent-modus)" d="Mapper agenten får lese og skrive i. Alt utenfor er låst. Én mappe per linje.">
+        <textarea className={field + " min-h-[84px] font-mono text-xs"} value={roots} onChange={(e) => setRoots(e.target.value)} spellCheck={false} />
+        <div className="mt-2 flex items-center gap-3"><button className="btn-primary" onClick={saveRoots}>Lagre mapper</button>{rootMsg && <span className="text-sm text-white/60">{rootMsg}</span>}</div>
+        <div className="mb-1.5 mt-4 text-xs text-white/50">Verktøy agenten har</div>
+        <div className="flex flex-wrap gap-1.5">{tl.map((t) => (
+          <span key={t.name} title={t.description} className={`rounded-lg px-2 py-1 text-xs ${t.needs_approval ? "bg-amber-400/15 text-amber-200" : "bg-white/8 text-white/70"}`}>{t.name}{t.needs_approval ? " · krever godkjenning" : ""}</span>))}</div>
+        <p className="mt-3 text-xs text-white/40">Agenten kan ikke kjøre kommandoer, installere programmer eller endre systeminnstillinger. Sletting går til papirkurven.</p>
       </Sec>
 
       <Sec t="Status">

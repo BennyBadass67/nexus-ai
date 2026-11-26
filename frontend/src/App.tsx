@@ -7,6 +7,7 @@ import Assistant from "./pages/Assistant";
 import Models from "./pages/Models";
 import Planned from "./pages/Planned";
 import SettingsPage from "./pages/SettingsPage";
+import ActivityPage from "./pages/ActivityPage";
 import CommandPalette, { Cmd } from "./components/CommandPalette";
 
 const NAV = [
@@ -85,7 +86,7 @@ function Shell() {
           {page === "workspace" && <Planned title="Workspace" phase={4} icon={FolderOpen} text="Velg mapper agenten får jobbe i. Alt utenfor er låst." items={["Filutforsker for arbeidsområder", "Agenten leser og skriver kun innenfor godkjente mapper", "Sletting krever alltid din godkjenning"]} />}
           {page === "automations" && <Planned title="Automations" phase={3} icon={Workflow} text="Oppgaver agenten gjør selv, med plan du kan se." items={["Gi en oppgave, agenten lager en plan", "Verktøy: filer, terminal, nettleser", "Stop Agent-knapp som alltid virker"]} />}
           {page === "memory" && <Planned title="Memory" phase={5} icon={Brain} text="Det agenten husker om deg og prosjektene dine." items={["Se, rediger og slett minner", "Preferanser og viktige beslutninger", "Alt lagres lokalt i SQLite"]} />}
-          {page === "activity" && <Planned title="Activity" phase={5} icon={Activity} text="Sanntidslogg over alt agenten gjør." items={["Aktiv oppgave og nåværende handling", "Hvert verktøykall loggført", "Feil og historikk"]} />}
+          {page === "activity" && <ActivityPage />}
           {page === "settings" && <SettingsPage />}
         </div>
       </main>

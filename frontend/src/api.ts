@@ -2,7 +2,8 @@ export type Health = { backend: string; ollama_online: boolean; ollama_version: 
 export type ModelInfo = { name: string; size: number; params?: string; quant?: string };
 export type ModelsResp = { online: boolean; error?: string; models: ModelInfo[] };
 export type Conv = { id: number; title: string; model: string | null; updated_at: number };
-export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number };
+export type Step = { call_id: string; tool: string; describe: string; risk: string; status: "running" | "waiting" | "ok" | "error" | "denied"; result?: string };
+export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number; steps?: Step[] };
 export type ConvFull = { id: number; title: string; model: string | null; messages: Msg[] };
 
 async function j<T>(url: string, init?: RequestInit): Promise<T> {
@@ -23,7 +24,15 @@ export type Pull = { status: string; total?: number | null; completed?: number |
 
 export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string };
 
+export type ToolInfo = { name: string; description: string; risk: string; needs_approval: boolean };
+export type Activity = { id: number; run_id: string | null; ts: number; kind: string; tool: string | null; detail: string; status: string; result: string };
+
 export const api = {
+  approve: (run: string, call_id: string, allow: boolean) => j<{ ok: boolean }>(`/api/agent/${run}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ call_id, allow }) }),
+  stopRun: (run: string) => j<{ ok: boolean }>(`/api/agent/${run}/stop`, { method: "POST" }),
+  agentConfig: () => j<{ roots: string[]; tools: ToolInfo[] }>("/api/agent/config"),
+  saveRoots: (roots: string[]) => j<{ roots: string[] }>("/api/agent/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roots }) }),
+  activity: (limit = 100) => j<Activity[]>(`/api/activity?limit=${limit}`),
   prefs: () => j<Prefs>("/api/settings"),
   savePrefs: (p: Partial<Prefs>) => j<Prefs>("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) }),
   benchAuto: () => j<{ measured: Bench[]; errors: Record<string, string>; remaining: number }>("/api/benchmark/auto", { method: "POST" }),
@@ -42,19 +51,27 @@ export const api = {
 };
 
 export type ChatEvent =
-  | { type: "meta"; conversation_id: number; model: string; provider: string }
+  | { type: "meta"; conversation_id: number; model: string; provider: string; run_id?: string }
   | { type: "token"; text: string }
   | { type: "stats"; tokens: number; seconds: number }
   | { type: "error"; message: string }
+  | { type: "run"; run_id: string }
+  | { type: "tool_call"; call_id: string; tool: string; describe: string; risk: string; needs_approval: boolean }
+  | { type: "approval"; call_id: string }
+  | { type: "tool_result"; call_id: string; status: "ok" | "error" | "denied"; result: string }
+  | { type: "notice"; text: string }
+  | { type: "final"; text: string }
+  | { type: "stopped" }
   | { type: "done" };
 
 /** Leser NDJSON-strømmen fra /api/chat og kaller onEvent for hver hendelse. */
-export async function streamChat(
-  body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean },
-  onEvent: (e: ChatEvent) => void,
-  signal: AbortSignal,
-) {
-  const r = await fetch("/api/chat", {
+export const streamChat = (body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean },
+  onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/chat", body, onEvent, signal);
+export const streamAgent = (body: { message: string; model: string; conversation_id?: number | null; text_mode?: boolean },
+  onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/agent/run", body, onEvent, signal);
+
+async function ndjson(url: string, body: object, onEvent: (e: ChatEvent) => void, signal: AbortSignal) {
+  const r = await fetch(url, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body), signal,
   });

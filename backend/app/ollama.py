@@ -99,3 +99,48 @@ async def bench(model: str) -> dict:
         raise RuntimeError("Fikk ikke målbart svar fra modellen")
     return {"model": model, "tokens": n, "tps": round(n / (ns / 1e9), 1),
             "load_s": round(o.get("load_duration", 0) / 1e9, 1)}
+
+
+class ToolsUnsupported(RuntimeError):
+    pass
+
+
+async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] | None) -> AsyncIterator[tuple[str, object]]:
+    """Som chat_stream, men støtter Ollamas verktøykall. Gir ("token", tekst), ("tool_calls", liste), ("stats", ..)."""
+    payload: dict = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m",
+                     "options": {"num_ctx": 4096, "temperature": 0.3}}
+    if tools:
+        payload["tools"] = tools
+    async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=5)) as c:
+        async with c.stream("POST", f"{config.OLLAMA_URL}/api/chat", json=payload) as r:
+            if r.status_code != 200:
+                body = (await r.aread()).decode("utf-8", "replace")
+                try:
+                    body = json.loads(body).get("error", body)
+                except Exception:
+                    pass
+                if "does not support tools" in str(body):
+                    raise ToolsUnsupported(body)
+                raise RuntimeError(body or f"Ollama svarte {r.status_code}")
+            calls: list[dict] = []
+            async for line in r.aiter_lines():
+                if not line.strip():
+                    continue
+                obj = json.loads(line)
+                if "error" in obj:
+                    if "does not support tools" in str(obj["error"]):
+                        raise ToolsUnsupported(obj["error"])
+                    raise RuntimeError(obj["error"])
+                msg = obj.get("message", {})
+                if msg.get("content"):
+                    yield "token", msg["content"]
+                for tc in msg.get("tool_calls") or []:
+                    fn = tc.get("function", {})
+                    calls.append({"name": fn.get("name", ""), "args": fn.get("arguments") or {}})
+                if obj.get("done"):
+                    n, ns = obj.get("eval_count"), obj.get("eval_duration")
+                    if calls:
+                        yield "tool_calls", calls
+                    if n and ns:
+                        yield "stats", {"tokens": n, "seconds": round(ns / 1e9, 2)}
+                    break

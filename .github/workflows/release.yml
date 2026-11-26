@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Nytt i 0.4.1: PC-en blir ikke lenger treg mens modellen svarer (lett grafikk som standard, rolig skriving, begrenset kontekst). Anbefalinger tar høyde for minnet Windows selv bruker. Eksisterende installasjoner oppdateres automatisk."
+          releaseBody: "Nytt i 0.5.0: Agent-modus (skiftenøkkelen i Assistant). Agenten kan lese og søke i filer, søke på nettet, lese nettsider og åpne filer, nettsider og kjente programmer. Skriving og sletting (til papirkurven) krever din godkjenning. Stopp-knapp og Activity-logg. Eksisterende installasjoner oppdateres automatisk."
           releaseDraft: false
           prerelease: false

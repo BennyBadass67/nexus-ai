@@ -20,6 +20,16 @@ CREATE TABLE IF NOT EXISTS messages (
   model TEXT,
   created_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id TEXT,
+  ts REAL NOT NULL,
+  kind TEXT NOT NULL,
+  tool TEXT,
+  detail TEXT,
+  status TEXT,
+  result TEXT
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
