@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.9.1: Team-chat: agentene svarer nå direkte på spørsmålet ditt først, og rollen styrer bare stil. Lederen velger hvem som svarer først."
+          releaseBody: "0.9.2: Ny oppdateringsflyt: steg-for-steg (sjekk, nedlasting med hastighet og estimat, installasjon, omstart) og en bekreftelse når appen er oppdatert."
           releaseDraft: false
           prerelease: false

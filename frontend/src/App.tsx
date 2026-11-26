@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command } from "lucide-react";
 import { Provider, useApp } from "./store";
 import { api, Conv, updateApi } from "./api";
+import { UpdatedToast } from "./components/UpdateCard";
 import HomePage from "./pages/HomePage";
 import Assistant from "./pages/Assistant";
 import Models from "./pages/Models";
@@ -33,7 +34,20 @@ function Shell() {
   const [openConv, setOpenConv] = useState<number | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
   const [newVer, setNewVer] = useState<string | null>(null);
-  useEffect(() => { updateApi.check().then((u) => u.available && setNewVer(u.latest)).catch(() => {}); }, []);
+  const [updated, setUpdated] = useState<{ v: string; notes?: string } | null>(null);
+  useEffect(() => {
+    updateApi.check().then((u) => {
+      if (u.available) setNewVer(u.latest);
+      try {
+        const raw = localStorage.getItem("nexus.updating");
+        if (raw) {
+          const { to } = JSON.parse(raw);
+          if (to && u.current === to) { setUpdated({ v: to, notes: u.notes || undefined }); localStorage.removeItem("nexus.updating"); }
+          else if (u.current !== "dev" && !u.error) localStorage.removeItem("nexus.updating");
+        }
+      } catch { /* */ }
+    }).catch(() => {});
+  }, []);
   const { health, model, models, setModel, pulls, prefs } = useApp();
   const online = !!health?.ollama_online;
     const nav = (p: Page) => { setPage(p); localStorage.setItem("nexus.page", p); };
@@ -95,6 +109,7 @@ function Shell() {
           {page === "settings" && <SettingsPage />}
         </div>
       </main>
+      {updated && <UpdatedToast version={updated.v} notes={updated.notes} onClose={() => setUpdated(null)} />}
       <CommandPalette open={palette} onClose={() => setPalette(false)} cmds={cmds} />
     </div>
   );
