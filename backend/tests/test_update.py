@@ -112,3 +112,57 @@ def test_launch_installer_not_windows():
     if sys.platform != "win32":
         with pytest.raises(RuntimeError):
             update.launch_installer(update.Path("x.exe"))
+
+
+def _wait_state(c, want):
+    for _ in range(100):
+        s = c.get("/api/update/status").json()
+        if s["state"] in want:
+            return s
+        time.sleep(0.05)
+    raise AssertionError("tidsavbrudd")
+
+
+def test_auto_downloads_in_background_without_launching(c, monkeypatch):
+    import asyncio
+    from app import update
+    launched = []
+    monkeypatch.setattr(update, "launch_installer", lambda p: launched.append(p))
+    c.put("/api/settings", json={"autoupdate": "on"})
+    assert asyncio.run(update.auto_tick()) == "downloading"
+    s = _wait_state(c, ("ready", "error"))
+    assert s["state"] == "ready" and s["version"] == "9.9.9" and os.path.exists(s["path"])
+    assert launched == []                                   # ingenting startes uten at brukeren sier ja
+    assert asyncio.run(update.auto_tick()) == "ready"       # ingen ny nedlasting
+    r = c.post("/api/update/install")                       # brukeren trykker "Start på nytt og installer"
+    assert r.status_code == 200 and len(launched) == 1 and launched[0].exists()
+    assert c.get("/api/update/status").json()["state"] == "started"
+
+
+def test_auto_respects_off_switch_and_up_to_date(c):
+    import asyncio
+    from app import update
+    c.put("/api/settings", json={"autoupdate": "off"})
+    assert asyncio.run(update.auto_tick()) == "off"
+    assert c.get("/api/update/status").json()["state"] == "idle"
+    c.put("/api/settings", json={"autoupdate": "on"})
+    MODE["latest"] = "0.1.0"
+    assert asyncio.run(update.auto_tick()) == "none"
+    assert c.get("/api/update/status").json()["state"] == "idle"
+
+
+def test_auto_rejects_bad_host_and_bad_file(c):
+    import asyncio
+    from app import update
+    c.put("/api/settings", json={"autoupdate": "on"})
+    MODE["dl_host"] = "http://evil.example/"
+    assert asyncio.run(update.auto_tick()) == "bad-url"
+    MODE["dl_host"] = None; MODE["v"] = "notexe"
+    assert asyncio.run(update.auto_tick()) == "downloading"
+    s = _wait_state(c, ("ready", "error"))
+    assert s["state"] == "error"
+
+
+def test_autoupdate_pref_validation(c):
+    assert c.put("/api/settings", json={"autoupdate": "maybe"}).status_code == 422
+    assert c.get("/api/settings").json()["autoupdate"] in ("on", "off")

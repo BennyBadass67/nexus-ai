@@ -116,3 +116,30 @@ export function UpdatedToast({ version, notes, onClose }: { version: string; not
     </div>
   );
 }
+
+/** Automatisk oppdatering: viser fremdrift når backend laster ned i bakgrunnen, og tilbyr omstart når filen er klar. */
+export function AutoUpdateBar() {
+  const [st, setSt] = useState<UpdateStatus | null>(null); const [hide, setHide] = useState<string | null>(null); const [err, setErr] = useState("");
+  useEffect(() => {
+    let alive = true;
+    const tick = () => updateApi.status().then((s) => alive && setSt(s)).catch(() => {});
+    tick(); const id = setInterval(tick, 4000); return () => { alive = false; clearInterval(id); };
+  }, []);
+  if (!st || (st.state !== "downloading" && st.state !== "ready" && st.state !== "launching" && st.state !== "started")) return null;
+  const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
+  const go = async () => { setErr(""); try { await updateApi.install(); } catch (e) { setErr(String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); } };
+  if (st.state === "downloading") return (
+    <div className="upd-toast animate-pop" role="status" style={{ bottom: 20 }}>
+      <span className="upd-ring"><Download size={18} /></span>
+      <div><div className="upd-h">Laster ned {st.version} i bakgrunnen</div><div className="upd-s">{pct ? `${pct} %` : "Starter…"} Du kan fortsette å bruke appen.</div></div>
+    </div>);
+  if (st.state === "ready" && hide !== st.version) return (
+    <div className="upd-toast animate-pop" role="status" style={{ bottom: 20 }}>
+      <span className="upd-ok"><Check size={18} strokeWidth={3} /></span>
+      <div><div className="upd-h">Versjon {st.version} er klar</div><div className="upd-s">{err || "Lastet ned. Appen starter på nytt av seg selv under installasjonen."}</div>
+        <div className="mt-2 flex gap-2"><button className="btn-primary" onClick={go}><Rocket size={14} /> Start på nytt og installer</button><button className="btn-ghost" onClick={() => setHide(st.version)}>Senere</button></div></div>
+    </div>);
+  if (st.state === "launching" || st.state === "started") return (
+    <div className="upd-toast animate-pop" role="status" style={{ bottom: 20 }}><span className="upd-ring"><Loader2 size={18} className="animate-spin" /></span><div><div className="upd-h">Installerer {st.version}…</div><div className="upd-s">Appen starter på nytt.</div></div></div>);
+  return null;
+}

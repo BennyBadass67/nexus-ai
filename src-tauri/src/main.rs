@@ -38,6 +38,7 @@ fn kill_backend(app: &AppHandle) {
     }
 }
 
+#[allow(dead_code)]
 async fn check_update(app: AppHandle) {
     let Ok(updater) = app.updater() else { ulog("updater: kunne ikke opprettes"); return };
     let update = match updater.check().await {
@@ -98,7 +99,8 @@ fn main() {
                 } else {
                     let _ = win.eval("document.getElementById('s').textContent='Backend startet ikke. Se C:\\\\Users\\\\<deg>\\\\.nexus-ai\\\\nexus.log'");
                 }
-                tauri::async_runtime::block_on(check_update(handle));
+                // Oppdatering styres nå av backend (automatisk nedlasting i bakgrunnen + tilbud om omstart i appen).
+                let _ = &handle;
             });
             Ok(())
         })

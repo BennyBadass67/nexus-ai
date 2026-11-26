@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command, StickyNote, GraduationCap, Mail } from "lucide-react";
 import { Provider, useApp } from "./store";
 import { api, Conv, extrasApi, updateApi } from "./api";
-import { UpdatedToast } from "./components/UpdateCard";
+import { UpdatedToast, AutoUpdateBar } from "./components/UpdateCard";
 import HomePage from "./pages/HomePage";
 import Assistant from "./pages/Assistant";
 import Models from "./pages/Models";
@@ -129,6 +129,7 @@ function Shell() {
           {page === "settings" && <SettingsPage />}
         </div>
       </main>
+      <AutoUpdateBar />
       {updated && <UpdatedToast version={updated.v} notes={updated.notes} onClose={() => setUpdated(null)} />}
       <CommandPalette open={palette} onClose={() => setPalette(false)} cmds={cmds} remote={remote} />
     </div>

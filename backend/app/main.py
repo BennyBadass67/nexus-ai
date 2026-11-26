@@ -23,6 +23,13 @@ app.include_router(projects.router)
 app.include_router(school.router)
 app.include_router(teambuilder.router)
 app.include_router(update.router)
+
+
+@app.on_event("startup")
+async def _auto_update_start():
+    import asyncio
+    asyncio.create_task(update.auto_loop())
+
 app.include_router(memory.router)
 app.include_router(workspace.router)
 app.include_router(extras.router)
@@ -36,9 +43,9 @@ SYSTEM_PROMPT = (
 HISTORY_LIMIT = 30
 
 PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
-                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off"}
+                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off", "autoupdate": "on"}
 PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
-PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass", "frost"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass", "frost"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}, "autoupdate": {"on", "off"}}
 
 
 def get_prefs() -> dict:

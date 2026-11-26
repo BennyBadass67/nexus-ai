@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.8.0: Studiestatistikk og studieplan, nytt Frost-tema (mørkt lilla glass), Instinct-fane."
+          releaseBody: "1.9.0: Automatisk oppdatering i bakgrunnen med tilbud om omstart."
           releaseDraft: false
           prerelease: false

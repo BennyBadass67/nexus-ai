@@ -85,7 +85,7 @@ def launch_installer(path: Path) -> None:
         raise RuntimeError(f"Windows kunne ikke starte installasjonsfilen (kode {rc}). Dobbeltklikk filen manuelt.")
 
 
-def _download(url: str, version: str) -> None:
+def _download(url: str, version: str, launch: bool = True) -> None:
     dest_dir = Path(tempfile.gettempdir()) / "nexus-update"
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / f"NEXUS_AI_{version}_setup.exe"
@@ -110,6 +110,10 @@ def _download(url: str, version: str) -> None:
             if f.read(2) != b"MZ":
                 raise RuntimeError("Filen er ikke en Windows-installer.")
         os.replace(part, dest)
+        if not launch:
+            _set(state="ready", path=str(dest))
+            ulog(f"lastet ned {dest} ({got} byte) i bakgrunnen, venter på at brukeren starter installasjonen")
+            return
         _set(state="launching", path=str(dest))
         ulog(f"lastet ned {dest} ({got} byte), starter installer")
         launch_installer(dest)
@@ -134,6 +138,20 @@ async def update_install():
     with _lock:
         if STATE["state"] in ("downloading", "launching"):
             raise HTTPException(409, "Oppdatering pågår allerede")
+        ready = STATE["state"] == "ready" and STATE.get("path") and Path(STATE["path"]).exists()
+        rpath, rver = STATE.get("path"), STATE.get("version")
+    if ready:
+        info = await fetch_latest()
+        if info.get("available") and info["latest"] == rver:
+            try:
+                _set(state="launching")
+                launch_installer(Path(rpath))
+                _set(state="started")
+            except Exception as e:
+                _set(state="error", error=str(e)[:400])
+                raise HTTPException(500, str(e)[:400])
+            return {"ok": True, "version": rver}
+        _set(state="idle", path=None)
     info = await fetch_latest()
     if info["error"]:
         raise HTTPException(502, "Kunne ikke sjekke oppdatering: " + info["error"])
@@ -145,3 +163,40 @@ async def update_install():
     _set(state="downloading", done=0, total=0, error=None, path=None, version=info["latest"])
     threading.Thread(target=_download, args=(url, info["latest"]), daemon=True).start()
     return {"ok": True, "version": info["latest"]}
+
+
+def autoupdate_on() -> bool:
+    from . import db
+    with db.conn() as c:
+        r = c.execute("SELECT value FROM settings WHERE key='pref:autoupdate'").fetchone()
+    return (r["value"] if r else "on") != "off"
+
+
+async def auto_tick() -> str:
+    """Én runde av automatisk oppdatering: sjekk, og last ned i bakgrunnen (uten å starte installeren)."""
+    if APP_VERSION == "dev" or not autoupdate_on():
+        return "off"
+    with _lock:
+        if STATE["state"] in ("downloading", "launching", "started", "ready"):
+            return STATE["state"]
+    info = await fetch_latest()
+    if info["error"] or not info["available"]:
+        return "none"
+    url = info["url"] or ""
+    if not url.startswith(ALLOWED_PREFIX) or not url.lower().endswith(".exe"):
+        ulog("auto: ugyldig nedlastingsadresse, hopper over")
+        return "bad-url"
+    _set(state="downloading", done=0, total=0, error=None, path=None, version=info["latest"])
+    threading.Thread(target=_download, args=(url, info["latest"], False), daemon=True).start()
+    return "downloading"
+
+
+async def auto_loop() -> None:
+    import asyncio
+    await asyncio.sleep(int(os.environ.get("NEXUS_AUTO_FIRST_DELAY", "20")))
+    while True:
+        try:
+            await auto_tick()
+        except Exception as e:  # aldri la bakgrunnssjekken ta ned appen
+            ulog(f"auto: feil {e}")
+        await asyncio.sleep(6 * 3600)

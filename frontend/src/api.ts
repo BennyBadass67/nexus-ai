@@ -23,7 +23,7 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
-export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass" | "frost"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off" };
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass" | "frost"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off"; autoupdate: "on" | "off" };
 
 export type AgentDef = { id: number; name: string; role: string; prompt: string; model: string | null; tools: string[] };
 export type Room = { id: number; title: string; agent_ids: number[]; max_rounds: number; mode: "roundrobin" | "leader" };
@@ -172,7 +172,7 @@ export const wsApi = {
 };
 
 export type UpdateInfo = { current: string; latest: string | null; available: boolean; url: string | null; notes: string; error: string | null };
-export type UpdateStatus = { state: "idle" | "downloading" | "launching" | "started" | "error"; done: number; total: number; error: string | null; path: string | null; version: string | null };
+export type UpdateStatus = { state: "idle" | "downloading" | "ready" | "launching" | "started" | "error"; done: number; total: number; error: string | null; path: string | null; version: string | null };
 export const updateApi = {
   check: () => j<UpdateInfo>("/api/update"),
   status: () => j<UpdateStatus>("/api/update/status"),

@@ -100,6 +100,10 @@ export default function SettingsPage() {
       </Sec>
 
       <Sec t="Oppdateringer" d="Sjekker GitHub for en nyere versjon.">
+        <label className="mb-4 flex items-center gap-2.5 text-sm">
+          <input type="checkbox" checked={prefs.autoupdate !== "off"} onChange={(e) => setPrefs({ autoupdate: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
+          Oppdater automatisk <span className="text-xs text-white/70">(sjekker ved oppstart og hver 6. time, laster ned i bakgrunnen, og spør før den starter på nytt)</span>
+        </label>
         <UpdateCard />
       </Sec>
 
