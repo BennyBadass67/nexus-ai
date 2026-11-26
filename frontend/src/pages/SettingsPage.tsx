@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, MoonStar, Check } from "lucide-react";
+import { Moon, Sun, MoonStar, Check, Sparkles } from "lucide-react";
 import { api, ToolInfo, updateApi, UpdateInfo, UpdateStatus } from "../api";
 import { useApp } from "../store";
 
-const ACCENTS = ["#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
+const ACCENTS = ["#e8553f", "#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
 const THEMES = [
-  { id: "dark", label: "Mørk", icon: Moon }, { id: "midnight", label: "Midnatt", icon: MoonStar }, { id: "light", label: "Lys", icon: Sun },
+  { id: "glass", label: "Varm glass", icon: Sparkles }, { id: "dark", label: "Mørk", icon: Moon }, { id: "midnight", label: "Midnatt", icon: MoonStar }, { id: "light", label: "Lys", icon: Sun },
 ] as const;
 const PERSONAS = [
   { label: "Vennlig og kort", text: "Vær varm, vennlig og kortfattet. Gå rett på sak." },
@@ -56,7 +56,7 @@ export default function SettingsPage() {
           {ACCENTS.map((c) => (
             <button key={c} aria-label={c} onClick={() => setPrefs({ accent: c })} style={{ background: c }}
               className="grid h-9 w-9 place-items-center rounded-full transition hover:scale-110 active:scale-95">{prefs.accent.toLowerCase() === c && <Check size={16} className="text-black/70" />}</button>))}
-          <label className="glass-soft flex cursor-pointer items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs">
+          <label className="glass-soft flex cursor-pointer items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs" title="Velg hvilken som helst farge">
             <input type="color" value={prefs.accent} onChange={(e) => setPrefs({ accent: e.target.value })} className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent p-0" />Egen farge</label></div>
         <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
           <input type="checkbox" checked={prefs.perf === "light"} onChange={(e) => setPrefs({ perf: e.target.checked ? "light" : "full" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
@@ -64,6 +64,9 @@ export default function SettingsPage() {
         <label className="mt-2 flex cursor-pointer items-center gap-3 text-sm">
           <input type="checkbox" disabled={prefs.perf === "light"} checked={prefs.aurora === "on" && prefs.perf === "full"} onChange={(e) => setPrefs({ aurora: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
           Animert bakgrunn <span className="text-xs text-white/40">(slå av for å spare batteri)</span></label>
+        <label className="mt-2 flex cursor-pointer items-center gap-3 text-sm">
+          <input type="checkbox" checked={prefs.intro !== "off"} onChange={(e) => setPrefs({ intro: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
+          Introanimasjon når appen åpnes</label>
       </Sec>
 
       <Sec t="Din agent" d="Navn og personlighet. Teksten under sendes som instruks til modellen i hver samtale.">

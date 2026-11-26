@@ -112,7 +112,7 @@ function Rooms({ agents, rooms, reload, goAgents }: { agents: AgentDef[]; rooms:
     return (
       <div key={key} className={`animate-rise flex gap-3 ${you ? "justify-end" : ""}`}>
         {!you && <div className="mt-0.5 grid h-8 w-8 flex-none place-items-center rounded-xl text-sm font-semibold text-black/75" style={{ background: colorOf(id, author) }}>{author[0]}</div>}
-        <div className={`min-w-0 max-w-[85%] ${you ? "rounded-[20px] rounded-br-md px-4 py-2.5" : ""}`} style={you ? { background: "linear-gradient(135deg, rgba(var(--accent),.38), rgba(var(--accent2),.3))" } : {}}>
+        <div className={`min-w-0 max-w-[85%] ${you ? "rounded-[20px] rounded-br-md px-4 py-2.5" : ""}`} style={you ? { background: "linear-gradient(135deg, rgb(var(--accent) / .38), rgb(var(--accent2) / .3))" } : {}}>
           {!you && <div className="mb-0.5 text-xs font-medium" style={{ color: colorOf(id, author) }}>{author}</div>}
           {steps && steps.length > 0 && <Steps steps={steps} runId={runId.current} onChange={patchStep} />}
           {content ? <div className={`text-[15px] leading-relaxed ${cursor ? "cursor" : ""}`}><Markdown text={content} /></div> : cursor ? <div className="py-1 text-white/40">tenker…</div> : null}

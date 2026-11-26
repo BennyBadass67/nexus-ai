@@ -28,7 +28,7 @@ body {
   margin: 0; color: #eaf1ff; background: #050810; font-family: theme("fontFamily.sans");
   font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; letter-spacing: -0.005em;
 }
-::selection { background: rgba(var(--accent),.35); }
+::selection { background: rgb(var(--accent) / .35); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); background-clip: padding-box; border: 3px solid transparent; }
@@ -55,7 +55,7 @@ body {
   .glass-soft { background: rgba(255,255,255,.055); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08); }
   .btn { @apply rounded-xl px-3.5 py-2 text-sm font-medium transition duration-200 active:scale-[.96] disabled:cursor-not-allowed; }
   .btn-primary { @apply btn text-[#04101f] disabled:opacity-40 hover:brightness-110;
-    background: linear-gradient(180deg, rgb(var(--accent-hi)), rgb(var(--accent))); box-shadow: 0 6px 20px -4px rgba(var(--accent),.55), inset 0 1px 0 rgba(255,255,255,.6); }
+    background: linear-gradient(180deg, rgb(var(--accent-hi)), rgb(var(--accent))); box-shadow: 0 6px 20px -4px rgb(var(--accent) / .55), inset 0 1px 0 rgba(255,255,255,.6); }
   .btn-ghost { @apply btn glass-soft hover:bg-white/10; }
   .kbd { @apply rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/60; }
   .skeleton { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; @apply animate-shimmer rounded-xl; }
@@ -74,8 +74,89 @@ body {
 html.perf .glass, html.perf .glass-soft { backdrop-filter: none; -webkit-backdrop-filter: none; }
 html.perf .glass { background: linear-gradient(145deg, rgba(30,38,60,.92), rgba(16,20,34,.92)); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 10px 24px -12px rgba(0,0,0,.6); }
 html.perf .glass-soft { background: rgba(255,255,255,.06); }
-html.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgba(var(--accent),.30), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgba(var(--accent2),.28), transparent 60%), #050810; }
+html.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgb(var(--accent) / .30), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgb(var(--accent2) / .28), transparent 60%), #050810; }
 html.perf .animate-rise, html.perf .animate-pop { animation-duration: .15s; }
 html.light.perf .glass { background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.8)); }
-html.light.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgba(var(--accent),.22), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgba(var(--accent2),.2), transparent 60%), #e9eef8; }
+html.light.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgb(var(--accent) / .22), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgb(var(--accent2) / .2), transparent 60%), #e9eef8; }
 html.midnight.perf .aurora { background: #000; }
+
+/* ===== Varm glass (design v2): lys, frostet glass over varm bakgrunn, aksentfarge styres av brukeren ===== */
+html.glass body { color: #2b1d17; background: #d8c0b2; }
+html.glass .aurora, html.glass.perf .aurora, html.glass.midnight .aurora {
+  background:
+    radial-gradient(48vw 48vw at 8% 0%, rgb(var(--accent) / .55), transparent 62%),
+    radial-gradient(42vw 42vw at 100% 100%, rgb(var(--accent2) / .35), transparent 60%),
+    radial-gradient(30vw 30vw at 70% 8%, rgba(255,255,255,.55), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, rgb(var(--accent)) 22%, #efe2d8), color-mix(in srgb, rgb(var(--accent)) 38%, #c9a998));
+}
+html.glass .aurora::after { background: none; }
+html.glass .aurora i { display: none; }
+html.glass:not(.perf) .aurora i { display: block; opacity: .35; mix-blend-mode: soft-light; }
+html.glass .glass, html.glass.perf .glass {
+  background: linear-gradient(150deg, rgba(255,255,255,.52), rgba(255,255,255,.26) 60%, rgba(255,255,255,.36));
+  box-shadow: 0 24px 50px -24px rgba(90,40,20,.45), inset 0 1px 0 rgba(255,255,255,.8);
+  backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+}
+html.glass.perf .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(150deg, rgba(255,250,246,.74), rgba(255,244,238,.55)); }
+html.glass .glass::before { background: linear-gradient(160deg, rgba(255,255,255,.95), rgba(255,255,255,.2) 40%, rgba(255,255,255,.1) 70%, rgb(var(--accent) / .25)); }
+html.glass .glass-soft { background: rgba(255,255,255,.42); border-color: rgba(255,255,255,.6); box-shadow: 0 8px 20px -14px rgba(90,40,20,.4), inset 0 1px 0 rgba(255,255,255,.7); }
+html.glass [class*="text-white"], html.glass h1, html.glass h2, html.glass h3 { color: #2b1d17; }
+html.glass [class*="text-white/"] { color: rgba(43,29,23,.62); }
+html.glass [class*="bg-white/"] { background-color: rgba(255,255,255,.4); }
+html.glass [class*="border-white"] { border-color: rgba(255,255,255,.6); }
+html.glass .btn-primary { background: #1d1411; color: #fff; box-shadow: 0 8px 20px -8px rgba(30,15,10,.6); }
+html.glass .btn-primary, html.glass .btn-primary * { color: #fff; }
+html.glass .btn-ghost { background: rgba(255,255,255,.5); }
+html.glass .md a { color: rgb(var(--accent)); }
+html.glass .md code { background: rgba(43,29,23,.08); }
+html.glass .cursor::after { background: rgb(var(--accent)); }
+html.glass ::-webkit-scrollbar-thumb { background: rgba(43,29,23,.2); }
+html.glass textarea, html.glass input[type=text], html.glass input:not([type]) { color: #2b1d17; }
+html.glass ::placeholder { color: rgba(43,29,23,.4); }
+
+.nav-item { color: rgba(255,255,255,.55); }
+.nav-item:hover { color: #fff; }
+.nav-item.on { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+html.light .nav-item { color: rgba(30,41,59,.65); } html.light .nav-item:hover { color: #0f172a; }
+html.light .nav-item.on { background: #fff; color: #0f172a; box-shadow: 0 6px 16px -8px rgba(30,50,100,.4); }
+html.glass .nav-item { color: rgba(43,29,23,.7); }
+html.glass .nav-item.on { background: #fff; color: #1d1411; box-shadow: 0 8px 18px -10px rgba(90,40,20,.5); }
+.nav-label { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .45; }
+
+.hero-card { color: #fff; background: linear-gradient(150deg, rgb(var(--accent-hi)) -40%, rgb(var(--accent)) 45%, color-mix(in srgb, rgb(var(--accent)) 80%, #000) 120%);
+  box-shadow: 0 30px 60px -28px rgb(var(--accent) / .8), inset 0 1px 0 rgba(255,255,255,.45); }
+.hero-card, .hero-card * { color: #fff !important; }
+.hero-card .hero-btn, .hero-card .hero-btn * { color: #1d1411 !important; }
+.hero-card::before { display: none; }
+.serif-i { font-family: "Instrument Serif", Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; }
+.stat-hot { background: linear-gradient(150deg, rgb(var(--accent-hi)) -30%, rgb(var(--accent)) 60%); }
+.stat-hot, .stat-hot * { color: #fff !important; }
+
+/* Introanimasjon */
+.intro { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; cursor: pointer;
+  background: radial-gradient(60vw 60vw at 50% 50%, rgb(var(--accent) / .35), transparent 65%), #0b0706; animation: introOut .7s ease-in 3.1s forwards; }
+.intro .ring { position: absolute; width: 120px; height: 120px; border-radius: 9999px; border: 2px solid rgb(var(--accent) / .8); opacity: 0; animation: ring 2.6s ease-out .3s both; }
+.intro .ring.r2 { animation-delay: .75s; }
+.intro .logo { width: 112px; height: 112px; object-fit: contain; animation: logoIn 1s cubic-bezier(.2,.9,.3,1.1) .1s both; filter: drop-shadow(0 0 28px rgb(var(--accent) / .9)); }
+.intro .word span { display: inline-block; opacity: 0; transform: translateY(14px); animation: letter .6s cubic-bezier(.2,.8,.2,1) forwards; }
+.intro .tag { opacity: 0; animation: fadeUp .8s ease-out 1.7s forwards; }
+.intro .skip { position: absolute; bottom: 28px; font-size: 11px; color: rgba(255,255,255,.35); }
+@keyframes ring { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(9); opacity: 0; } }
+@keyframes logoIn { 0% { opacity: 0; transform: scale(.4) rotate(-12deg); filter: blur(12px); } 100% { opacity: 1; transform: none; } }
+@keyframes letter { to { opacity: 1; transform: none; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: .7; transform: none; } }
+@keyframes introOut { to { opacity: 0; visibility: hidden; } }
+.intro, .intro * { color: #fff !important; }
+
+/* Flytende animasjoner i Varm glass (gjelder også Lett grafikk, kun transform/opacity så det er billig for GPU-en) */
+html.glass.perf .animate-rise { animation-duration: .55s; }
+html.glass.perf .animate-pop { animation-duration: .3s; }
+html.glass .glass-soft, html.glass .btn, html.glass .nav-item, html.glass .hero-btn { transition: transform .25s cubic-bezier(.2,.8,.2,1), background-color .25s, box-shadow .25s, color .2s, filter .2s; }
+html.glass button.glass-soft:hover { transform: translateY(-2px); box-shadow: 0 14px 24px -14px rgba(90,40,20,.5), inset 0 1px 0 rgba(255,255,255,.8); }
+html.glass button.glass-soft:active, html.glass .btn:active { transform: scale(.97); }
+html.glass .nav-item:hover:not(.on) { transform: translateX(3px); background: rgba(255,255,255,.35); }
+html.glass .hero-card { transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+html.glass .hero-card:hover { transform: translateY(-2px); }
+html.glass .stat-hot, html.glass .glass { transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s; }
+html.glass main .glass:hover { box-shadow: 0 30px 56px -26px rgba(90,40,20,.5), inset 0 1px 0 rgba(255,255,255,.85); }
+@media (prefers-reduced-motion: reduce) { .intro { display: none; } * { animation-duration: .01s !important; transition-duration: .01s !important; } }

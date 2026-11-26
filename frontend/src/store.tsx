@@ -1,14 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { api, Prefs, Health, ModelsResp, Pull, streamPull } from "./api";
 
-const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "dark", accent: "#5aa9ff", aurora: "on", perf: "light", reply_lang: "auto" };
+const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "dark", accent: "#5aa9ff", aurora: "on", perf: "light", reply_lang: "auto", intro: "on" };
 function applyPrefs(p: Prefs) {
   const h = document.documentElement; const v = parseInt(p.accent.slice(1), 16);
   const rgb = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
   const hi = rgb.map((x) => Math.round(x + (255 - x) * 0.55));
-  const sh = [rgb[2], rgb[0], rgb[1]].map((x) => Math.round(x * 0.55 + 70));
+  const sh = p.theme === "glass" ? rgb.map((x) => Math.round(x * 0.72)) : [rgb[2], rgb[0], rgb[1]].map((x) => Math.round(x * 0.55 + 70));
   h.style.setProperty("--accent", rgb.join(" ")); h.style.setProperty("--accent-hi", hi.join(" ")); h.style.setProperty("--accent2", sh.join(" "));
-  h.classList.toggle("midnight", p.theme === "midnight"); h.classList.toggle("light", p.theme === "light");
+  h.classList.toggle("midnight", p.theme === "midnight"); h.classList.toggle("light", p.theme === "light" || p.theme === "glass"); h.classList.toggle("glass", p.theme === "glass");
   h.classList.toggle("noaurora", p.aurora === "off" || p.perf === "light"); h.classList.toggle("perf", p.perf === "light");
 }
 type Ctx = {
@@ -23,7 +23,11 @@ export const useApp = () => useContext(C);
 export function Provider({ children }: { children: ReactNode }) {
   const [prefs, setPrefsState] = useState<Prefs>(() => { try { return { ...DEF, ...JSON.parse(localStorage.getItem("nexus.prefs") || "{}") }; } catch { return DEF; } });
   useEffect(() => { applyPrefs(prefs); localStorage.setItem("nexus.prefs", JSON.stringify(prefs)); }, [prefs]);
-  useEffect(() => { api.prefs().then((p) => setPrefsState((c) => ({ ...c, ...p }))).catch(() => {}); }, []);
+  useEffect(() => { api.prefs().then((p) => {
+    // Engangs: nytt design (v2) blir standard første gang, brukeren kan bytte tilbake i Settings.
+    if (!localStorage.getItem("nexus.design2")) { localStorage.setItem("nexus.design2", "1"); const m = { theme: "glass" as const, accent: "#e8553f" }; setPrefsState((c) => ({ ...c, ...p, ...m })); api.savePrefs(m).catch(() => {}); }
+    else setPrefsState((c) => ({ ...c, ...p }));
+  }).catch(() => {}); }, []);
   const setPrefs = (p: Partial<Prefs>) => { setPrefsState((c) => ({ ...c, ...p })); api.savePrefs(p).catch(() => {}); };
   const [health, setHealth] = useState<Health | null>(null);
   const [models, setModels] = useState<ModelsResp | null>(null);

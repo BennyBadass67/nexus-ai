@@ -102,7 +102,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
           <div className="mx-auto max-w-3xl space-y-6 pb-6">
             {msgs.length === 0 && (
               <div className="flex min-h-[55vh] animate-rise flex-col items-center justify-center text-center">
-                <div className="mb-5 grid h-16 w-16 place-items-center rounded-3xl text-[#04101f] shadow-[0_12px_40px_-8px_rgba(var(--accent),.8)]" style={{ background: "linear-gradient(135deg,rgb(var(--accent-hi)),rgb(var(--accent)) 60%,rgb(var(--accent2)))" }}><Sparkles size={28} /></div>
+                <div className="mb-5 grid h-16 w-16 place-items-center rounded-3xl text-[#04101f] shadow-[0_12px_40px_-8px_rgb(var(--accent)/.8)]" style={{ background: "linear-gradient(135deg,rgb(var(--accent-hi)),rgb(var(--accent)) 60%,rgb(var(--accent2)))" }}><Sparkles size={28} /></div>
                 <h1 className="text-[28px] font-semibold tracking-tight">Hei, Benjamin</h1>
                 <p className="mt-1 text-white/50">{noModel ? "Du trenger en modell først." : health?.ollama_online === false ? "Ollama er ikke startet." : "Hva vil du jobbe med?"}</p>
                 {noModel ? <button className="btn-primary mt-5" onClick={goModels}>Last ned en modell</button> : (
@@ -116,7 +116,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
               return m.role === "user" ? (
                 <div key={i} className="flex animate-rise justify-end">
                   <div className="max-w-[80%] whitespace-pre-wrap rounded-[22px] rounded-br-md px-4 py-3 text-[15px] leading-relaxed shadow-lg"
-                    style={{ background: "linear-gradient(135deg, rgba(var(--accent),.38), rgba(var(--accent2),.3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>{m.content}</div>
+                    style={{ background: "linear-gradient(135deg, rgb(var(--accent) / .38), rgb(var(--accent2) / .3))", boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)" }}>{m.content}</div>
                 </div>
               ) : (
                 <div key={i} className="group flex animate-rise gap-3">
