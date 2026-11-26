@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, MoonStar, Check } from "lucide-react";
-import { api, ToolInfo, updateApi, UpdateInfo } from "../api";
+import { api, ToolInfo, updateApi, UpdateInfo, UpdateStatus } from "../api";
 import { useApp } from "../store";
 
 const ACCENTS = ["#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
@@ -23,6 +23,13 @@ export default function SettingsPage() {
   const [upd, setUpd] = useState<UpdateInfo | null>(null); const [updBusy, setUpdBusy] = useState(false);
   const checkUpd = () => { setUpdBusy(true); updateApi.check().then(setUpd).catch((e) => setUpd({ current: "?", latest: null, available: false, url: null, notes: "", error: String(e) })).finally(() => setUpdBusy(false)); };
   useEffect(() => { checkUpd(); }, []); // eslint-disable-line
+  const [us, setUs] = useState<UpdateStatus | null>(null); const [installErr, setInstallErr] = useState("");
+  const install = async () => {
+    setInstallErr("");
+    try { await updateApi.install(); } catch (e) { setInstallErr(String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); return; }
+    const t = setInterval(() => updateApi.status().then((s) => { setUs(s); if (s.state === "error" || s.state === "started") clearInterval(t); }).catch(() => { clearInterval(t); }), 600);
+  };
+  const busyInstall = us?.state === "downloading" || us?.state === "launching";
   const { health, model, prefs, setPrefs } = useApp();
   const [name, setName] = useState(prefs.agent_name);
   const [user, setUser] = useState(prefs.user_name);
@@ -86,10 +93,15 @@ export default function SettingsPage() {
           <span className="text-white/60">Installert: <b className="text-white">{upd?.current ?? "…"}</b></span>
           <span className="text-white/60">Nyeste: <b className="text-white">{upd?.latest ?? "…"}</b></span>
           <button className="btn-primary" disabled={updBusy} onClick={checkUpd}>{updBusy ? "Sjekker…" : "Sjekk nå"}</button>
-          {upd?.available && upd.url && <a className="btn-primary" href={upd.url} target="_blank" rel="noreferrer">Last ned {upd.latest}</a>}
+          {upd?.available && <button className="btn-primary" disabled={busyInstall || us?.state === "started"} onClick={install}>{busyInstall ? "Laster ned…" : `Installer ${upd.latest} nå`}</button>}
         </div>
         {upd && !upd.error && !upd.available && upd.current !== "dev" && <p className="mt-2 text-xs text-emerald-300">Du har nyeste versjon.</p>}
-        {upd?.available && <p className="mt-2 text-xs text-amber-200">Ny versjon finnes. Lukk NEXUS, kjør den nedlastede filen.</p>}
+        {upd?.available && !us && <p className="mt-2 text-xs text-amber-200">Ny versjon finnes. «Installer nå» laster ned, lukker NEXUS, oppdaterer og åpner appen igjen.</p>}
+        {busyInstall && us && <div className="mt-3"><div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-nx-blue transition-all" style={{ width: us.total ? `${(us.done / us.total) * 100}%` : "10%" }} /></div>
+          <p className="mt-1 text-xs text-white/50">{us.state === "launching" ? "Starter installasjonen…" : `Laster ned ${(us.done / 1e6).toFixed(1)} av ${(us.total / 1e6).toFixed(1)} MB`}</p></div>}
+        {us?.state === "started" && <p className="mt-2 text-sm text-emerald-300">Installasjonen er startet. NEXUS lukkes av seg selv og åpnes på nytt med versjon {us.version}. Hvis ikke noe skjer innen to minutter, kjør filen: {us.path}</p>}
+        {(us?.state === "error" || installErr) && <p className="mt-2 text-sm text-rose-300">Oppdateringen feilet: {us?.error || installErr}</p>}
+        {upd?.available && upd.url && <p className="mt-2 text-xs text-white/40">Alternativ: <a className="underline" href={upd.url} target="_blank" rel="noreferrer">last ned filen og kjør den selv</a> (lukk NEXUS først).</p>}
         {upd?.error && <p className="mt-2 text-xs text-rose-300">Kunne ikke sjekke: {upd.error}</p>}
       </Sec>
 

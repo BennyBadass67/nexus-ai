@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.4: Installeren tømmer Windows ikon-cache etter installasjon, så oppgavelinje-ikonet byttes automatisk. Hook-logg i %TEMP%\\nexus-installer-hook.log."
+          releaseBody: "0.7.5: Installer nå-knappen i Settings laster faktisk ned, sjekker og kjører installeren, og appen starter på nytt med ny versjon. Feil (avbrutt nedlasting, ugyldig fil, installasjon som feiler) vises tydelig. Inneholder ikon-cache-fiksen fra 0.7.4."
           releaseDraft: false
           prerelease: false

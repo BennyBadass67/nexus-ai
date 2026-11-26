@@ -171,4 +171,9 @@ export const wsApi = {
 };
 
 export type UpdateInfo = { current: string; latest: string | null; available: boolean; url: string | null; notes: string; error: string | null };
-export const updateApi = { check: () => j<UpdateInfo>("/api/update") };
+export type UpdateStatus = { state: "idle" | "downloading" | "launching" | "started" | "error"; done: number; total: number; error: string | null; path: string | null; version: string | null };
+export const updateApi = {
+  check: () => j<UpdateInfo>("/api/update"),
+  status: () => j<UpdateStatus>("/api/update/status"),
+  install: () => j<{ ok: boolean; version: string }>("/api/update/install", { method: "POST" }),
+};
