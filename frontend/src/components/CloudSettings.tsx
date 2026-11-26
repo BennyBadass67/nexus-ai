@@ -27,6 +27,7 @@ function Card({ p, reload }: { p: CloudProv; reload: () => void }) {
       <button className="flex w-full items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
         <Cloud size={16} /><span className="font-medium">{p.label}</span>
         {p.id === "cloudflare" && <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px]">anbefalt</span>}
+        {p.usage.limit != null && <span className="hidden items-center gap-2 text-xs text-white/70 sm:flex"><span className="h-1.5 w-20 overflow-hidden rounded-full bg-white/15"><span className="sysbar block h-full transition-all" style={{ width: `${p.usage.pct}%` }} /></span>{p.usage.remaining?.toLocaleString("nb-NO")} {p.usage.unit} igjen</span>}
         <span style={p.enabled ? { background: "#065f46", color: "#fff" } : undefined} className={`ml-auto rounded-full px-2.5 py-0.5 text-xs ${p.enabled ? "" : "bg-white/12"}`}>{p.enabled ? "på" : "av"}</span>
       </button>
       {open && <div className="animate-rise space-y-3 border-t border-white/10 px-4 py-4 text-sm">
@@ -38,6 +39,7 @@ function Card({ p, reload }: { p: CloudProv; reload: () => void }) {
         <input className={field} type="password" autoComplete="off" placeholder={p.has_key ? `Nøkkel lagret (${p.key_hint}). Skriv ny for å bytte.` : p.custom ? "API-nøkkel (valgfri)" : "API-nøkkel"} value={key} onChange={(e) => setKey(e.target.value)} />
         {!p.enabled && <label className="flex items-start gap-2 text-xs"><input type="checkbox" className="mt-0.5" checked={ok} onChange={(e) => setOk(e.target.checked)} />
           <span>Jeg forstår at meldingene mine, og filer og minner agenten bruker i samtalen, sendes til {p.label} når jeg velger en skymodell.</span></label>}
+        <Usage p={p} />
         <div className="flex flex-wrap items-center gap-2">
           <button className="btn" disabled={!!busy || (!p.has_key && !key && !p.custom)} onClick={test}>{busy === "test" ? <Loader2 size={14} className="inline animate-spin" /> : null} Test tilkobling</button>
           {p.enabled
@@ -62,5 +64,20 @@ export default function CloudSettings() {
           Ærlig: ingen seriøs leverandør fungerer helt uten konto og nøkkel. Nøkkelen er gratis og lagres bare på denne PC-en.</div></div>
       {err && <div className="text-sm text-rose-300">{err}</div>}
       {ps.map((p) => <Card key={p.id + p.enabled} p={p} reload={load} />)}
+    </div>);
+}
+
+
+function Usage({ p }: { p: CloudProv }) {
+  const u = p.usage; const n = (x: number) => x.toLocaleString("nb-NO");
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs">
+      <div className="flex items-center gap-2 font-medium"><span>Forbruk i dag</span><span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-normal">anslag</span></div>
+      {u.limit != null && <>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/12"><div className="sysbar h-full transition-all duration-700" style={{ width: `${u.pct}%` }} /></div>
+        <div className="mt-1.5 text-sm"><b>{n(u.remaining ?? 0)}</b> av {n(u.limit)} {u.unit} igjen ({u.pct}% brukt)</div>
+      </>}
+      <div className="mt-1 text-white/70">{u.requests} forespørsler · ca. {n(u.tokens_in)} tokens inn, {n(u.tokens_out)} ut. Nullstilles {u.resets}.</div>
+      <div className="mt-1 text-white/60">{u.note}</div>
     </div>);
 }

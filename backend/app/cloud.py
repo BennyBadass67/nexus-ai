@@ -61,6 +61,20 @@ CREATE TABLE IF NOT EXISTS cloud_cfg (
 """
 with db.conn() as _c:
     _c.executescript(SCHEMA)
+    _cols = {r["name"] for r in _c.execute("PRAGMA table_info(cloud_cfg)").fetchall()}
+    for _n, _t in (("tok_in", "INTEGER"), ("tok_out", "INTEGER"), ("neurons", "REAL")):
+        if _n not in _cols:
+            _c.execute(f"ALTER TABLE cloud_cfg ADD COLUMN {_n} {_t} NOT NULL DEFAULT 0")
+
+# Cloudflare: neuroner per million tokens (inn, ut). Kilde: developers.cloudflare.com/workers-ai/platform/pricing/
+CF_NEURONS = {
+    "@cf/meta/llama-3.1-8b-instruct-fp8-fast": (4119, 34868), "@cf/meta/llama-3.3-70b-instruct-fp8-fast": (26668, 204805),
+    "@cf/mistralai/mistral-small-3.1-24b-instruct": (31876, 50488), "@cf/meta/llama-3.1-8b-instruct-fp8": (13778, 26128),
+    "@cf/meta/llama-4-scout-17b-16e-instruct": (24545, 77273), "@cf/google/gemma-3-12b-it": (31371, 50560),
+}
+CF_FALLBACK = (26668, 204805)   # ukjent modell: antar dyreste kjente (70B), så anslaget aldri er for lavt
+# Kjente gratisgrenser per dag (leverandørens dokumentasjon). Groq og Gemini har grenser per modell: ingen felles tall, så vi viser bare forbruk.
+DAILY_LIMITS = {"cloudflare": (10000, "neuroner"), "openrouter": (50, "forespørsler")}
 
 
 class CloudError(RuntimeError):
@@ -117,7 +131,7 @@ def _bump(pid: str) -> None:
         c.execute("INSERT OR IGNORE INTO cloud_cfg(provider) VALUES(?)", (pid,))
         r = c.execute("SELECT day FROM cloud_cfg WHERE provider=?", (pid,)).fetchone()
         if r["day"] != today:
-            c.execute("UPDATE cloud_cfg SET day=?, req_today=0 WHERE provider=?", (today, pid))
+            c.execute("UPDATE cloud_cfg SET day=?, req_today=0, tok_in=0, tok_out=0, neurons=0 WHERE provider=?", (today, pid))
         c.execute("UPDATE cloud_cfg SET req_today=req_today+1 WHERE provider=?", (pid,))
 
 
@@ -142,6 +156,21 @@ def _err(pid: str, status: int, body: str) -> CloudError:
     if status == 404:
         return CloudError(f"{label}: modellen finnes ikke eller er fjernet. Velg en annen. {msg}")
     return CloudError(f"{label} svarte {status}: {msg}")
+
+
+def est_tokens(messages: list[dict]) -> int:
+    return max(1, int(sum(len(str(m.get("content") or "")) for m in messages) / 3.5))
+
+
+def neurons_for(model: str, tin: int, tout: int) -> float:
+    i, o = CF_NEURONS.get(model, CF_FALLBACK)
+    return (tin * i + tout * o) / 1_000_000
+
+
+def _add_usage(pid: str, model: str, tin: int, tout: int) -> None:
+    nr = neurons_for(model, tin, tout) if pid == "cloudflare" else 0
+    with db.conn() as c:
+        c.execute("UPDATE cloud_cfg SET tok_in=tok_in+?, tok_out=tok_out+?, neurons=neurons+? WHERE provider=?", (tin, tout, nr, pid))
 
 
 def _prep(name: str) -> tuple[str, str, dict, dict]:
@@ -170,6 +199,7 @@ async def stream(name: str, messages: list[dict], tools: list[dict] | None = Non
         payload["response_format"] = {"type": "json_object"}
     _bump(pid)
     t0 = time.time(); n = 0
+    tin = est_tokens(payload["messages"])
     calls: dict[int, dict] = {}
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=8)) as c:
@@ -202,9 +232,11 @@ async def stream(name: str, messages: list[dict], tools: list[dict] | None = Non
                             e["name"] += fn.get("name") or ""
                             e["args"] += fn.get("arguments") or ""
     except httpx.ConnectError:
+        _add_usage(pid, model, 0, 0)
         raise CloudError(f"Ingen kontakt med {PROVIDERS[pid]['label']}. Sjekk nettforbindelsen.")
     except httpx.TimeoutException:
         raise CloudError(f"{PROVIDERS[pid]['label']} svarte ikke i tide.")
+    _add_usage(pid, model, tin, n)
     if calls:
         out = []
         for e in calls.values():
@@ -246,6 +278,22 @@ async def list_models(pid: str) -> list[str]:
     return sorted(set(found))[:60] or list(p["models"])
 
 
+def usage(pid: str, cfg: dict, today: str) -> dict:
+    fresh = cfg["day"] == today
+    reqs = cfg["req_today"] if fresh else 0
+    tin, tout = (cfg["tok_in"], cfg["tok_out"]) if fresh else (0, 0)
+    out = {"requests": reqs, "tokens_in": tin, "tokens_out": tout, "estimate": True, "resets": "00:00 UTC (01:00 norsk tid om vinteren)"}
+    if pid in DAILY_LIMITS:
+        lim, unit = DAILY_LIMITS[pid]
+        used = round(cfg["neurons"] if fresh else 0) if pid == "cloudflare" else reqs
+        out.update({"limit": lim, "unit": unit, "used": used, "remaining": max(0, lim - used), "pct": min(100, round(100 * used / lim))})
+        out["note"] = ("Anslag: tokens telles ca. (tegn / 3,5) og regnes om med Cloudflares oppgitte neuron-priser. Cloudflares eget tall i dashbordet er fasit."
+                       if pid == "cloudflare" else "Gratis :free-modeller har ca. 50 forespørsler per dag og 20 per minutt uten kreditt. Tallet er ditt eget tellerverk.")
+    else:
+        out["note"] = "Denne leverandøren har grenser per modell og konto, uten ett felles tall. Se grensene i leverandørens konsoll. Her vises bare det du har brukt via NEXUS."
+    return out
+
+
 def status(pid: str) -> dict:
     p, cfg = PROVIDERS[pid], get_cfg(pid)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -257,7 +305,7 @@ def status(pid: str) -> dict:
             "needs_account": p["needs_account"], "custom": pid == "custom",
             "has_key": bool(cfg["api_key"]), "key_hint": ("…" + cfg["api_key"][-4:]) if len(cfg["api_key"]) >= 8 else ("satt" if cfg["api_key"] else ""),
             "account_id": cfg["account_id"], "base_url": cfg["base_url"], "custom_model": cfg["custom_model"], "enabled": bool(cfg["enabled"] and cfg["consent_at"]),
-            "models": models or list(p["models"]), "requests_today": cfg["req_today"] if cfg["day"] == today else 0}
+            "models": models or list(p["models"]), "requests_today": cfg["req_today"] if cfg["day"] == today else 0, "usage": usage(pid, cfg, today)}
 
 
 def enabled_models() -> list[dict]:

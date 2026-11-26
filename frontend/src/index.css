@@ -166,6 +166,7 @@ html.glass main .glass:hover { box-shadow: 0 30px 56px -26px rgba(90,40,20,.5), 
 html.glass [class*="text-white/"] { color: rgba(43,29,23,.8); }
 html.glass .nav-item { color: rgba(43,29,23,.82); }
 html.light [class*="text-white/"] { color: #3b4658; }
+html.glass.light [class*="text-white/"] { color: rgba(43,29,23,.84); }
 html:not(.light) [class*="text-white/2"], html:not(.light) [class*="text-white/3"], html:not(.light) [class*="text-white/4"], html:not(.light) [class*="text-white/5"] { color: rgba(255,255,255,.7); }
 html:not(.light) .nav-item { color: rgba(255,255,255,.72); }
 html.light [class*="text-nx-ice"], html.light .text-nx-blue { color: color-mix(in srgb, rgb(var(--accent-deep)) 72%, #000); }

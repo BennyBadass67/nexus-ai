@@ -155,3 +155,23 @@ def test_cloudflare_url_needs_account():
     with pytest.raises(cloud.CloudError):
         cloud.base_url("cloudflare", {"account_id": "abc"})
     assert cloud.base_url("cloudflare", {"account_id": "a" * 32}).endswith("/accounts/" + "a" * 32 + "/ai/v1")
+
+
+def test_usage_tokens_and_neuron_estimate():
+    import asyncio
+    assert cloud.neurons_for("@cf/meta/llama-3.1-8b-instruct-fp8-fast", 1_000_000, 0) == 4119
+    assert cloud.neurons_for("@cf/meta/llama-3.1-8b-instruct-fp8-fast", 0, 1_000_000) == 34868
+    assert cloud.neurons_for("@cf/unknown/model", 0, 1_000_000) == 204805          # ukjent: dyreste anslag
+    setup_custom()
+    before = client.get("/api/cloud/providers").json()[-1]["usage"]["tokens_out"]
+    asyncio.run(collect("cloud:custom:free-a"))
+    u = client.get("/api/cloud/providers").json()[-1]["usage"]
+    assert u["tokens_out"] > before and u["tokens_in"] > 0 and u["estimate"] and "limit" not in u and "per modell" in u["note"]
+    client.put("/api/cloud/providers/custom", json={"enabled": False})
+
+
+def test_cloudflare_remaining_is_limit_minus_used():
+    cloud._bump("cloudflare"); cloud._add_usage("cloudflare", "@cf/meta/llama-3.3-70b-instruct-fp8-fast", 1000, 2000)
+    u = next(p for p in client.get("/api/cloud/providers").json() if p["id"] == "cloudflare")["usage"]
+    assert u["limit"] == 10000 and u["unit"] == "neuroner" and u["used"] == round(26668 * 1000 / 1e6 + 204805 * 2000 / 1e6)
+    assert u["remaining"] == 10000 - u["used"] and 0 < u["pct"] < 100 and "Anslag" in u["note"]

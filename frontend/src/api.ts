@@ -246,7 +246,8 @@ export const smartApi = {
   suggest: (cid: number, model: string) => j<{ suggestions: string[] }>(`/api/conversations/${cid}/suggest`, { method: "POST", headers: J, body: JSON.stringify({ model }) }),
 };
 
-export type CloudProv = { id: string; label: string; free: string; key_help: string; key_url: string; needs_account: boolean; custom: boolean; has_key: boolean; key_hint: string; account_id: string; base_url: string; custom_model: string; enabled: boolean; models: string[]; requests_today: number };
+export type CloudProv = { id: string; label: string; free: string; key_help: string; key_url: string; needs_account: boolean; custom: boolean; has_key: boolean; key_hint: string; account_id: string; base_url: string; custom_model: string; enabled: boolean; models: string[]; requests_today: number; usage: CloudUsage };
+export type CloudUsage = { requests: number; tokens_in: number; tokens_out: number; estimate: boolean; resets: string; note: string; limit?: number; unit?: string; used?: number; remaining?: number; pct?: number };
 export const cloudApi = {
   list: () => j<CloudProv[]>("/api/cloud/providers"),
   save: (id: string, b: Record<string, unknown>) => j<CloudProv>("/api/cloud/providers/" + id, { method: "PUT", headers: J, body: JSON.stringify(b) }),

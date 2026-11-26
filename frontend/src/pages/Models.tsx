@@ -98,7 +98,7 @@ function Recommended({ goBrowse }: { goBrowse: () => void }) {
             <div className="text-[15px] font-semibold">{t.title}</div><div className="text-xs text-white/50">{t.desc}</div>
             {t.model ? (<div className="mt-4">
               <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2.5"><Dot level={t.model.level} reason={t.model.reason} size={11} />
-                <div className="min-w-0"><div className="truncate font-medium">{t.model.tag}</div><div className="text-xs text-white/45">{t.model.size_gb} GB · {t.model.reason}</div></div></div>
+                <div className="min-w-0"><div className="truncate font-medium">{t.model.tag}</div><div className="text-xs text-white/65">{t.model.size_gb} GB · {t.model.reason}</div></div></div>
                 {have.has(t.model.tag) ? <button className="btn-ghost !py-1.5 text-emerald-300" onClick={() => setModel(t.model!.tag)}>Bruk</button>
                   : <button className="btn-primary flex items-center gap-1.5 !py-1.5" disabled={!!pulls[t.model.tag]} onClick={() => pull(t.model!.tag)}><Download size={14} />Last ned</button>}</div>
               <PullBar name={t.model.tag} /></div>) : <div className="mt-4 text-sm text-white/45">Ingen modell i denne kategorien passer PC-en din godt.</div>}
