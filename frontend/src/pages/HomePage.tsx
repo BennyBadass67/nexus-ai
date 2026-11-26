@@ -1,4 +1,4 @@
-import { SysMonCard, NotesCard, StudyCard } from "../components/HomeWidgets";
+import { SysMonCard, NotesCard, StudyCard, TodayCard } from "../components/HomeWidgets";
 import { useEffect, useState } from "react";
 import { MessageSquare, Cpu, Database, ArrowUpRight, Download, Zap, Brain, Users, Boxes, FolderOpen, Activity, Plus } from "lucide-react";
 import { api, Conv, memApi } from "../api";
@@ -88,6 +88,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
         {stat(MessageSquare, "Samtaler", String(health?.conversations ?? 0), "lagret lokalt på PC-en", 200)}
         {stat(Brain, "Minner", mems === null ? "–" : String(mems), "fakta NEXUS husker om deg", 260)}
       </div>
+      <TodayCard go={go} />
       <div className="grid gap-4 md:grid-cols-2"><SysMonCard /><NotesCard go={() => go("notes")} /></div>
       <StudyCard go={() => go("study")} />
       <div className="grid gap-3 pb-2 md:grid-cols-2 xl:grid-cols-3">

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Cpu, MemoryStick, StickyNote, Check, Plus } from "lucide-react";
 import { GraduationCap } from "lucide-react";
-import { Deck, extrasApi, Note, studyApi, SysMon } from "../api";
+import { Deck, extrasApi, Note, studyApi, SysMon, Today, todayApi } from "../api";
+import { CalendarCheck, Cloud, MessageSquare } from "lucide-react";
 
 const Bar = ({ pct, label, sub }: { pct: number | null; label: string; sub?: string }) => (
   <div>
@@ -56,5 +57,39 @@ export function StudyCard({ go }: { go: () => void }) {
       {d.length === 0 ? <div className="mt-3 text-xs text-white/60">Lim inn pensum og få øvingskort laget lokalt.</div> :
         <div className="mt-3 flex items-end gap-3"><div className="text-3xl font-semibold tabular-nums">{due}</div><div className="pb-1 text-xs text-white/65">kort å øve på i dag, fordelt på {d.length} {d.length === 1 ? "stokk" : "stokker"}</div></div>}
       <button className="btn mt-3" onClick={go}>{due ? "Øv nå" : "Lag kort"}</button>
+    </div>);
+}
+
+export function TodayCard({ go }: { go: (p: string) => void }) {
+  const [t, setT] = useState<Today | null>(null);
+  const load = () => todayApi.get().then(setT).catch(() => {});
+  useEffect(() => { load(); }, []);
+  if (!t) return null;
+  const hour = new Date().getHours();
+  const hi = hour < 5 ? "God natt" : hour < 11 ? "God morgen" : hour < 17 ? "God dag" : "God kveld";
+  const list = [...t.tasks_overdue.map((n) => ({ n, tag: "forfalt" })), ...t.tasks_today.map((n) => ({ n, tag: "i dag" })), ...(t.tasks_overdue.length + t.tasks_today.length === 0 ? t.tasks_next.map((n) => ({ n, tag: "" })) : [])];
+  const tile = "glass-soft flex min-h-[112px] flex-col rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]";
+  return (
+    <div className="glass animate-rise rounded-[26px] p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold"><CalendarCheck size={15} />I dag<span className="ml-1 font-normal text-white/60">{hi}. {t.tasks_overdue.length ? `${t.tasks_overdue.length} forfalt.` : t.tasks_open ? `${t.tasks_open} åpne oppgaver.` : "Ingen åpne oppgaver."}</span></div>
+      <div className="mt-3 grid gap-3 md:grid-cols-4">
+        <div className={tile + " cursor-default"}>
+          <div className="text-xs text-white/65">Oppgaver</div>
+          <div className="mt-1.5 space-y-1">
+            {list.length === 0 && <div className="text-xs text-white/60">Ingenting haster.</div>}
+            {list.slice(0, 3).map(({ n, tag }) => (
+              <button key={n.id} className="flex w-full items-center gap-1.5 text-left text-xs" onClick={async () => { await extrasApi.patchNote(n.id, { done: true }); load(); }} title="Merk som ferdig">
+                <span className="grid h-3.5 w-3.5 flex-none place-items-center rounded border border-white/40" /><span className="truncate">{n.text}</span>{tag && <span className="ml-auto flex-none rounded-full bg-white/15 px-1.5 text-[10px]">{tag}</span>}</button>))}
+          </div>
+        </div>
+        <button className={tile} onClick={() => go("study")}><div className="text-xs text-white/65">Øvingskort</div>
+          <div className="mt-1 text-3xl font-semibold tabular-nums">{t.cards_due}</div><div className="mt-auto text-xs text-white/65">{t.cards_total === 0 ? "Lag din første stokk" : t.cards_due ? "klare til å øves på" : "ferdig for nå"}</div></button>
+        <button className={tile} onClick={() => go("settings")}><div className="flex items-center gap-1 text-xs text-white/65"><Cloud size={12} />Sky-kvote</div>
+          {t.quota.length === 0 ? <div className="mt-2 text-xs text-white/60">Sky-KI er av. Alt kjører lokalt.</div> : t.quota.map((q) => (
+            <div key={q.id} className="mt-2"><div className="text-xs"><b className="tabular-nums">{q.remaining.toLocaleString("nb-NO")}</b> {q.unit} igjen <span className="text-white/60">(anslag)</span></div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="sysbar h-full transition-all duration-700" style={{ width: q.pct + "%" }} /></div></div>))}</button>
+        <button className={tile} onClick={() => go("assistant")}><div className="flex items-center gap-1 text-xs text-white/65"><MessageSquare size={12} />Fortsett</div>
+          {t.last_chat ? <><div className="mt-1.5 line-clamp-2 text-sm font-medium">{t.last_chat.title}</div>{t.last_chat.project && <div className="mt-auto text-xs text-white/65">Prosjekt: {t.last_chat.project}</div>}</> : <div className="mt-2 text-xs text-white/60">Start din første samtale.</div>}</button>
+      </div>
     </div>);
 }

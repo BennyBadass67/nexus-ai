@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.5.0: Prosjekter med egne instrukser i Assistant."
+          releaseBody: "1.6.0: I dag-oversikt på Home (oppgaver, øvingskort, sky-kvote, fortsett samtale)."
           releaseDraft: false
           prerelease: false

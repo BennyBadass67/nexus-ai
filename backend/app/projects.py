@@ -85,3 +85,29 @@ def assign(cid: int, b: AssignIn):
         if c.execute("UPDATE conversations SET project_id=? WHERE id=?", (b.project_id, cid)).rowcount == 0:
             raise HTTPException(404, "Samtalen finnes ikke")
     return {"ok": True}
+
+
+@router.get("/api/today")
+def today(date: str | None = None):
+    """Samlet dagsoversikt til Home. `date` (YYYY-MM-DD, brukerens lokale dag) kan sendes inn; ellers brukes PC-ens dato."""
+    import re, time as _t
+    from . import cloud, extras
+    d = date if date and re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) else _t.strftime("%Y-%m-%d")
+    notes = [n for n in extras.list_notes(include_done=False)]
+    dated = [n for n in notes if n["due"] and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(n["due"]))]
+    now = _t.time()
+    with db.conn() as c:
+        due_cards = c.execute("SELECT COUNT(*) FROM cards WHERE due<=?", (now,)).fetchone()[0]
+        total_cards = c.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        last = c.execute("""SELECT v.id, v.title, v.updated_at, p.name AS project FROM conversations v
+                            LEFT JOIN projects p ON p.id=v.project_id ORDER BY v.updated_at DESC LIMIT 1""").fetchone()
+    quota = []
+    for pid in cloud.PROVIDERS:
+        s = cloud.status(pid)
+        if s["enabled"] and s["usage"].get("limit") is not None:
+            u = s["usage"]
+            quota.append({"id": pid, "label": s["label"], "remaining": u["remaining"], "limit": u["limit"], "unit": u["unit"], "pct": u["pct"]})
+    return {"date": d, "tasks_open": len(notes),
+            "tasks_overdue": [n for n in dated if n["due"] < d][:5], "tasks_today": [n for n in dated if n["due"] == d][:5],
+            "tasks_next": [n for n in notes if n not in dated or n["due"] >= d][:3],
+            "cards_due": due_cards, "cards_total": total_cards, "quota": quota, "last_chat": dict(last) if last else None}

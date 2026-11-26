@@ -263,3 +263,7 @@ export const projectsApi = {
   remove: (id: number) => j("/api/projects/" + id, { method: "DELETE" }),
   assign: (cid: number, project_id: number | null) => j(`/api/conversations/${cid}/project`, { method: "PUT", headers: J, body: JSON.stringify({ project_id }) }),
 };
+
+export type Today = { date: string; tasks_open: number; tasks_overdue: Note[]; tasks_today: Note[]; tasks_next: Note[]; cards_due: number; cards_total: number;
+  quota: { id: string; label: string; remaining: number; limit: number; unit: string; pct: number }[]; last_chat: { id: number; title: string; updated_at: number; project: string | null } | null };
+export const todayApi = { get: () => { const d = new Date(); const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; return j<Today>("/api/today?date=" + ds); } };

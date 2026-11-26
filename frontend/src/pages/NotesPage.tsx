@@ -35,7 +35,7 @@ export default function NotesPage() {
               <div key={n.id} className="note-row group flex animate-rise items-center gap-3 rounded-2xl glass-soft px-4 py-3">
                 <button onClick={() => extrasApi.patchNote(n.id, { done: !n.done }).then(load)} title={n.done ? "Åpne igjen" : "Ferdig"}
                   className={`grid h-6 w-6 flex-none place-items-center rounded-full border transition ${n.done ? "border-emerald-600 bg-emerald-600 text-white" : "border-white/40 hover:border-nx-blue"}`}>{n.done && <Check size={13} strokeWidth={3} />}</button>
-                <div className={`min-w-0 flex-1 text-sm ${n.done ? "line-through opacity-60" : ""}`}>{n.text}
+                <div className={`min-w-0 flex-1 text-sm ${n.done ? "line-through opacity-80" : ""}`}>{n.text}
                   {n.due && <span className="ml-2 rounded-full bg-white/12 px-2 py-0.5 text-[11px]">frist {n.due}</span>}
                   {n.source === "agent" && <span className="ml-2 inline-flex items-center gap-1 text-[11px] text-white/55"><Bot size={11} />lagt til av agenten</span>}</div>
                 <button onClick={() => extrasApi.delNote(n.id).then(load)} title="Slett" className="rounded-lg p-1.5 text-white/50 opacity-0 transition hover:bg-white/10 hover:text-white group-hover:opacity-100"><Trash2 size={14} /></button>
