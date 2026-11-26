@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Users, Bot, Square, ArrowUp, Trash2, Sparkles, Eraser, Pencil, Check } from "lucide-react";
-import { api, AgentDef, Room, RoomMsg, Step, streamRoom, teamApi, ToolInfo } from "../api";
+import { api, AgentDef, Room, RoomMsg, Step, streamRoom, teamApi, ToolInfo, builderApi, TeamProposal } from "../api";
 import { useApp } from "../store";
 import Markdown from "../components/Markdown";
 import Steps from "../components/Steps";
@@ -10,7 +10,7 @@ const colorOf = (id: number | null, name: string) => id === null ? "#ffffff" : C
 type Live = { agent: string; agent_id?: number; text: string; steps: Step[]; done: boolean };
 
 export default function AgentsPage() {
-  const [tab, setTab] = useState<"rooms" | "agents">("rooms");
+  const [tab, setTab] = useState<"rooms" | "agents" | "builder">("rooms");
   const [agents, setAgents] = useState<AgentDef[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const load = () => { teamApi.agents().then(setAgents).catch(() => {}); teamApi.rooms().then(setRooms).catch(() => {}); };
@@ -19,10 +19,10 @@ export default function AgentsPage() {
     <div className="flex h-full flex-col gap-3">
       <div className="glass flex items-center justify-between rounded-[24px] px-5 py-3">
         <div><h1 className="text-lg font-semibold">Agenter</h1><p className="text-xs text-white/50">Flere agenter med egne roller som snakker sammen. Én modell kjører om gangen.</p></div>
-        <div className="flex rounded-2xl bg-white/5 p-1">{([["rooms", "Rom", Users], ["agents", "Agenter", Bot]] as const).map(([id, l, I]) => (
+        <div className="flex rounded-2xl bg-white/5 p-1">{([["builder", "Bygg team", Sparkles], ["rooms", "Rom", Users], ["agents", "Agenter", Bot]] as const).map(([id, l, I]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-2 rounded-xl px-4 py-1.5 text-sm transition ${tab === id ? "bg-white/14" : "text-white/55 hover:text-white"}`}><I size={14} />{l}</button>))}</div>
       </div>
-      <div className="min-h-0 flex-1">{tab === "rooms" ? <Rooms agents={agents} rooms={rooms} reload={load} goAgents={() => setTab("agents")} /> : <Agents agents={agents} reload={load} />}</div>
+      <div className="min-h-0 flex-1">{tab === "builder" ? <Builder done={() => { load(); setTab("rooms"); }} /> : tab === "rooms" ? <Rooms agents={agents} rooms={rooms} reload={load} goAgents={() => setTab("agents")} /> : <Agents agents={agents} reload={load} />}</div>
     </div>
   );
 }
@@ -171,6 +171,50 @@ function Rooms({ agents, rooms, reload, goAgents }: { agents: AgentDef[]; rooms:
               : <button className="btn-primary grid h-10 w-10 place-items-center !p-0" disabled={!text.trim()} onClick={send}><ArrowUp size={18} strokeWidth={2.5} /></button>}</div></div>
         </>)}
       </section>
+    </div>
+  );
+}
+
+
+const IDEAS = ["Et team som hjelper meg med lekser i matte og norsk", "Et team som lager en enkel nettside for en kafé", "Et team som planlegger en tur til Roma"];
+
+function Builder({ done }: { done: () => void }) {
+  const { model, models } = useApp();
+  const [desc, setDesc] = useState("");
+  const [prop, setProp] = useState<TeamProposal | null>(null);
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const clean = (e: unknown) => String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1");
+  const design = async () => { setBusy(true); setErr(""); setProp(null);
+    try { const r = await builderApi.design(desc.trim(), model); setProp(r.proposal); } catch (e) { setErr(clean(e)); } finally { setBusy(false); } };
+  const create = async () => { if (!prop) return; setBusy(true); setErr("");
+    try { await builderApi.create(prop); done(); } catch (e) { setErr(clean(e)); setBusy(false); } };
+  const upd = (i: number, patch: Partial<TeamProposal["agents"][number]>) => prop && setProp({ ...prop, agents: prop.agents.map((a, j) => (j === i ? { ...a, ...patch } : a)) });
+  const noModel = models && !models.models.length;
+  return (
+    <div className="glass h-full overflow-auto rounded-[28px] p-6">
+      <h2 className="text-lg font-semibold">Bygg et team med assistenten</h2>
+      <p className="text-sm text-white/55">Beskriv hva du vil ha hjelp til. Assistenten foreslår agenter med roller. Du ser forslaget og kan endre det før noe opprettes.</p>
+      <textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={1500} placeholder="F.eks. «et team som hjelper meg med lekser»"
+        className="mt-4 min-h-[90px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-nx-blue/60" />
+      <div className="mt-2 flex flex-wrap gap-1.5">{IDEAS.map((x) => <button key={x} onClick={() => setDesc(x)} className="rounded-lg bg-white/8 px-2.5 py-1 text-xs hover:bg-white/15">{x}</button>)}</div>
+      <div className="mt-3 flex items-center gap-3">
+        <button className="btn-primary flex items-center gap-2" disabled={busy || desc.trim().length < 5 || !!noModel} onClick={design}><Sparkles size={14} />{busy && !prop ? "Tenker… (kan ta et minutt)" : "Foreslå team"}</button>
+        {noModel && <span className="text-sm text-amber-200">Last ned en modell under Models først.</span>}
+        <span className="text-xs text-white/40">Bruker din lokale modell. Små modeller (under 3B) lager ofte dårlige team.</span></div>
+      {err && <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm text-rose-200">{err}</div>}
+      {prop && (
+        <div className="mt-5 space-y-3">
+          <div className="flex flex-wrap items-center gap-3"><input value={prop.title} onChange={(e) => setProp({ ...prop, title: e.target.value })} maxLength={80} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium outline-none" />
+            <span className="text-xs text-white/50">{prop.mode === "leader" ? "Leder velger hvem som snakker" : "Alle snakker i tur"} · {prop.max_rounds} runder · modell: {prop.model}</span></div>
+          <div className="grid gap-3 md:grid-cols-2">{prop.agents.map((a, i) => (
+            <div key={i} className="rounded-2xl glass-soft p-4">
+              <input value={a.name} maxLength={30} onChange={(e) => upd(i, { name: e.target.value })} className="w-full bg-transparent text-sm font-semibold outline-none" />
+              <input value={a.role} maxLength={200} onChange={(e) => upd(i, { role: e.target.value })} className="mt-1 w-full bg-transparent text-xs text-nx-ice/80 outline-none" />
+              <textarea value={a.prompt} maxLength={2000} onChange={(e) => upd(i, { prompt: e.target.value })} className="mt-2 min-h-[70px] w-full resize-y rounded-lg bg-white/5 p-2 text-xs text-white/70 outline-none" />
+              {a.tools.length > 0 && <div className="mt-1 text-[11px] text-white/45">Verktøy: {a.tools.join(", ")}</div>}
+            </div>))}</div>
+          <div className="flex gap-3"><button className="btn-primary" disabled={busy} onClick={create}>Opprett team</button><button className="btn-ghost" onClick={() => setProp(null)}>Forkast</button></div>
+        </div>)}
     </div>
   );
 }

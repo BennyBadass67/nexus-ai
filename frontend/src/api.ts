@@ -177,3 +177,10 @@ export const updateApi = {
   status: () => j<UpdateStatus>("/api/update/status"),
   install: () => j<{ ok: boolean; version: string }>("/api/update/install", { method: "POST" }),
 };
+
+export type TeamAgent = { name: string; role: string; prompt: string; tools: string[] };
+export type TeamProposal = { title: string; agents: TeamAgent[]; mode: "roundrobin" | "leader"; max_rounds: number; model: string };
+export const builderApi = {
+  design: (description: string, model: string) => j<{ proposal: TeamProposal; model_used: string }>("/api/teams/design", { method: "POST", headers: J, body: JSON.stringify({ description, model }) }),
+  create: (p: TeamProposal) => j<Room>("/api/teams/create", { method: "POST", headers: J, body: JSON.stringify(p) }),
+};

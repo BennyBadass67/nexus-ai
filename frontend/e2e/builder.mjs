@@ -1,0 +1,17 @@
+import puppeteer from "puppeteer-core";
+const b = await puppeteer.launch({executablePath:"/usr/bin/google-chrome",args:["--no-sandbox"],headless:"new"});
+const p = await b.newPage(); await p.setViewport({width:1360,height:900});
+const w=ms=>new Promise(r=>setTimeout(r,ms));
+await p.setRequestInterception(true);
+const prop={title:"Leksehjelp",mode:"roundrobin",max_rounds:3,model:"qwen2.5:0.5b",agents:[{name:"Matteveileder",role:"Forklarer matte steg for steg",prompt:"Du hjelper med matte. Svar på norsk.",tools:[]},{name:"Norsklærer",role:"Hjelper med tekst og rettskriving",prompt:"Du hjelper med norsk.",tools:[]}]};
+p.on("request",r=>{ if(r.url().endsWith("/api/teams/design")) r.respond({status:200,contentType:"application/json",body:JSON.stringify({proposal:prop,model_used:"qwen2.5:0.5b"})}); else r.continue();});
+await p.goto("http://127.0.0.1:8765/",{waitUntil:"networkidle0"});
+const click=t=>p.evaluate(t=>[...document.querySelectorAll("button")].find(b=>b.textContent.includes(t)).click(),t);
+await p.evaluate(()=>[...document.querySelectorAll("nav button")].find(b=>/Agent/.test(b.title)).click()); await w(800);
+await click("Bygg team"); await w(300);
+await p.type("textarea","Et team som hjelper meg med lekser"); await click("Foreslå team"); await w(1000);
+await p.screenshot({path:"/downloads/nexus/ui-builder.png"});
+await click("Opprett team"); await w(1500);
+const rooms=await p.evaluate(()=>fetch("/api/rooms").then(r=>r.json()));
+console.log(JSON.stringify(rooms).slice(0,300));
+await b.close();
