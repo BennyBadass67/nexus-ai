@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.3: Fikser at skrivefeltene i Settings mistet fokus for hver bokstav og at skjermen hoppet. Testet med automatisk skrivetest i Settings, Memory, Assistant og Agents. Inneholder alt fra 0.7.0 til 0.7.2."
+          releaseBody: "0.7.4: Installeren tømmer Windows ikon-cache etter installasjon, så oppgavelinje-ikonet byttes automatisk. Hook-logg i %TEMP%\\nexus-installer-hook.log."
           releaseDraft: false
           prerelease: false
