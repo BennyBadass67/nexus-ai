@@ -11,6 +11,9 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const [convs, setConvs] = useState<Conv[]>([]);
   const [cid, setCid] = useState<number | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const tokBuf = useRef(""); const tokTimer = useRef<number | null>(null);
+  const flushTok = () => { tokTimer.current = null; const t = tokBuf.current; tokBuf.current = ""; if (!t) return;
+    setMsgs((m) => { const c = [...m]; const l = c[c.length - 1]; if (!l) return m; c[c.length - 1] = { ...l, content: l.content + t }; return c; }); };
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -50,12 +53,13 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
     try {
       await streamChat({ message, model, conversation_id: cid, regenerate }, (e) => {
         if (e.type === "meta") { id = e.conversation_id; setCid(e.conversation_id); }
-        else if (e.type === "token") setMsgs((m) => { const c = [...m]; const l = c[c.length - 1]; c[c.length - 1] = { ...l, content: l.content + e.text }; return c; });
-        else if (e.type === "stats") setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], tps: e.tokens / Math.max(e.seconds, 0.01) }; return c; });
+        else if (e.type === "token") { tokBuf.current += e.text; if (!tokTimer.current) tokTimer.current = window.setTimeout(flushTok, 100); }
+        else if (e.type === "stats") { if (tokTimer.current) clearTimeout(tokTimer.current); flushTok(); setMsgs((m) => { const c = [...m]; c[c.length - 1] = { ...c[c.length - 1], tps: e.tokens / Math.max(e.seconds, 0.01) }; return c; }); }
         else if (e.type === "error") setErr(e.message);
       }, abort.current.signal);
     } catch (e: any) { if (e.name !== "AbortError") setErr(String(e.message || e)); }
     finally {
+      if (tokTimer.current) clearTimeout(tokTimer.current); flushTok();
       setBusy(false); loadList(); refresh();
       setMsgs((m) => (m.length && m[m.length - 1].role === "assistant" && !m[m.length - 1].content ? m.slice(0, -1) : m));
       void id;

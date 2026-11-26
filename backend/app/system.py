@@ -109,6 +109,7 @@ def hardware(refresh: bool = False) -> Hardware:
     return _hw
 
 
+DESKTOP_VRAM_GB, DESKTOP_RAM_GB = 0.9, 4.0
 OVERHEAD = 1.25  # kontekst/KV-cache og runtime kommer oppå filstørrelsen
 
 
@@ -116,9 +117,12 @@ def _static_rate(size_gb: float, hw: Hardware) -> dict:
     """green = passer og går raskt, yellow = går men tregt/tungt, red = for stor."""
     need = size_gb * OVERHEAD
     if hw.vram_gb > 0 and hw.gpu_vendor == "nvidia":
-        if need <= hw.vram_gb * 0.92:
+        # Windows-skrivebordet og nettleseren bruker ca. 0,9 GB VRAM og ca. 4 GB RAM selv. Det er ikke ledig for modellen.
+        vram = max(hw.vram_gb - DESKTOP_VRAM_GB, 0.5)
+        ram = max(hw.ram_gb - DESKTOP_RAM_GB, 0.0)
+        if need <= vram * 0.92:
             return {"level": "green", "reason": f"Passer helt i GPU-minnet ({hw.vram_gb:g} GB). Raskt."}
-        if need <= hw.vram_gb * 0.9 + hw.ram_gb * 0.4:
+        if need <= vram * 0.9 + ram * 0.5:
             return {"level": "yellow", "reason": "Deles mellom GPU og RAM. Fungerer, men tregere (ca. 3-8 tokens/sek)."}
         return {"level": "red", "reason": f"For stor for {hw.ram_gb:g} GB RAM. Kan krasje eller være ubrukelig treg."}
     # CPU-only (eller GPU uten Ollama-støtte vi kan stole på)

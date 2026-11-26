@@ -21,7 +21,7 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
-export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light"; accent: string; aurora: "on" | "off"; reply_lang: string };
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string };
 
 export const api = {
   prefs: () => j<Prefs>("/api/settings"),

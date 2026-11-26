@@ -42,7 +42,10 @@ export default function SettingsPage() {
           <label className="glass-soft flex cursor-pointer items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs">
             <input type="color" value={prefs.accent} onChange={(e) => setPrefs({ accent: e.target.value })} className="h-7 w-7 cursor-pointer rounded-full border-0 bg-transparent p-0" />Egen farge</label></div>
         <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
-          <input type="checkbox" checked={prefs.aurora === "on"} onChange={(e) => setPrefs({ aurora: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
+          <input type="checkbox" checked={prefs.perf === "light"} onChange={(e) => setPrefs({ perf: e.target.checked ? "light" : "full" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
+          Lett grafikk <span className="text-xs text-white/40">(anbefalt: ingen blur/animasjon, så PC-en holder seg rask mens modellen jobber)</span></label>
+        <label className="mt-2 flex cursor-pointer items-center gap-3 text-sm">
+          <input type="checkbox" disabled={prefs.perf === "light"} checked={prefs.aurora === "on" && prefs.perf === "full"} onChange={(e) => setPrefs({ aurora: e.target.checked ? "on" : "off" })} className="h-4 w-4 accent-[rgb(var(--accent))]" />
           Animert bakgrunn <span className="text-xs text-white/40">(slå av for å spare batteri)</span></label>
       </Sec>
 

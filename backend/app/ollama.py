@@ -26,7 +26,9 @@ async def version() -> str | None:
 
 async def chat_stream(model: str, messages: list[dict]) -> AsyncIterator[tuple[str, object]]:
     """Gir ("token", tekst) underveis og til slutt ("stats", {tokens, seconds})."""
-    payload = {"model": model, "messages": messages, "stream": True}
+    # Begrenset kontekst gir mindre minnebruk (viktig på 4 GB GPU / 8 GB RAM). keep_alive holder modellen varm.
+    payload = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m",
+               "options": {"num_ctx": 4096}}
     async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=5)) as c:
         async with c.stream("POST", f"{config.OLLAMA_URL}/api/chat", json=payload) as r:
             if r.status_code != 200:

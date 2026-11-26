@@ -19,7 +19,8 @@ def test_rating_for_benjamins_laptop():
     r = lambda gb: system.rate(gb, LAPTOP)["level"]
     assert r(1.0) == "green" and r(1.9) == "green"    # 3B
     assert r(2.9) == "green" or r(2.9) == "yellow"
-    assert r(4.7) == "yellow"                         # 7-8B
+    assert r(2.5) == "yellow"                         # 4B deler seg med skrivebordet
+    assert r(4.7) == "red"                            # 7-8B sprenger 8 GB RAM
     assert r(9.0) == "red" and r(20) == "red"         # 14B+
 
 def test_rating_other_machines():
@@ -80,6 +81,6 @@ def test_calibration_uses_measured_speed():
 def test_spilled_model_prediction_slower():
     system.set_calibration({"a:3b": {"tps": 40, "size_gb": 1.9}}, LAPTOP)
     fit = system.rate(1.9, LAPTOP)["tps"]
-    spill = system.rate(4.7, LAPTOP)           # 7-8B: deles mellom GPU og RAM
+    spill = system.rate(2.5, LAPTOP)           # 4B: deles mellom GPU og RAM
     assert spill["basis"] == "predicted" and spill["tps"] < fit / 2
     system.set_calibration({}, LAPTOP)

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { api, Prefs, Health, ModelsResp, Pull, streamPull } from "./api";
 
-const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "dark", accent: "#5aa9ff", aurora: "on", reply_lang: "auto" };
+const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "dark", accent: "#5aa9ff", aurora: "on", perf: "light", reply_lang: "auto" };
 function applyPrefs(p: Prefs) {
   const h = document.documentElement; const v = parseInt(p.accent.slice(1), 16);
   const rgb = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
@@ -9,7 +9,7 @@ function applyPrefs(p: Prefs) {
   const sh = [rgb[2], rgb[0], rgb[1]].map((x) => Math.round(x * 0.55 + 70));
   h.style.setProperty("--accent", rgb.join(" ")); h.style.setProperty("--accent-hi", hi.join(" ")); h.style.setProperty("--accent2", sh.join(" "));
   h.classList.toggle("midnight", p.theme === "midnight"); h.classList.toggle("light", p.theme === "light");
-  h.classList.toggle("noaurora", p.aurora === "off");
+  h.classList.toggle("noaurora", p.aurora === "off" || p.perf === "light"); h.classList.toggle("perf", p.perf === "light");
 }
 type Ctx = {
   prefs: Prefs; setPrefs: (p: Partial<Prefs>) => void;

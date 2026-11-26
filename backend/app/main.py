@@ -22,9 +22,9 @@ SYSTEM_PROMPT = (
 HISTORY_LIMIT = 30
 
 PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
-                 "accent": "#5aa9ff", "aurora": "on", "reply_lang": "auto"}
+                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto"}
 PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
-PREF_CHOICES = {"theme": {"dark", "midnight", "light"}, "aurora": {"on", "off"}}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light"}, "aurora": {"on", "off"}, "perf": {"light", "full"}}
 
 
 def get_prefs() -> dict:

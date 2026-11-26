@@ -69,3 +69,13 @@ body {
 .md code { font-family: "Cascadia Code", "JetBrains Mono", ui-monospace, monospace; font-size: .86em; background: rgba(255,255,255,.1); padding: .12em .4em; border-radius: 6px; }
 .md a { color: #8fc4ff; text-decoration: underline; text-underline-offset: 3px; }
 .cursor::after { content: ""; display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: text-bottom; border-radius: 2px; background: #8fc4ff; animation: blink 1s infinite; }
+
+/* Lett grafikk (standard): ingen sanntids-blur og ingen animasjon, så GPU-en går til modellen. */
+html.perf .glass, html.perf .glass-soft { backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.perf .glass { background: linear-gradient(145deg, rgba(30,38,60,.92), rgba(16,20,34,.92)); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 10px 24px -12px rgba(0,0,0,.6); }
+html.perf .glass-soft { background: rgba(255,255,255,.06); }
+html.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgba(var(--accent),.30), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgba(var(--accent2),.28), transparent 60%), #050810; }
+html.perf .animate-rise, html.perf .animate-pop { animation-duration: .15s; }
+html.light.perf .glass { background: linear-gradient(145deg, rgba(255,255,255,.95), rgba(255,255,255,.8)); }
+html.light.perf .aurora { background: radial-gradient(60vw 60vw at 5% -5%, rgba(var(--accent),.22), transparent 60%), radial-gradient(50vw 50vw at 100% 105%, rgba(var(--accent2),.2), transparent 60%), #e9eef8; }
+html.midnight.perf .aurora { background: #000; }
