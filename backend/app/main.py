@@ -386,13 +386,17 @@ async def library_search(q: str = ""):
     await load_cal()
     try:
         hw = await asyncio.to_thread(system.hardware)
-        models = await library.search(q)
+        models = await library.browse(q)
         for m in models:
             m["size_ratings"] = []
             for lab in m["sizes"]:
                 gb = system.est_size_from_params(lab)
                 m["size_ratings"].append({"label": lab, "est_gb": gb, **(system.rate(gb, hw) if gb else {"level": "unknown", "reason": ""})})
-        return {"ok": True, "models": models}
+            m["categories"] = library.categorize(m)
+            m["fits"] = any(r["level"] in ("green", "yellow") for r in m["size_ratings"])
+        counts = {cid: sum(1 for m in models if cid in m["categories"]) for cid, _ in library.CATEGORIES}
+        counts["passer"] = sum(1 for m in models if m["fits"])
+        return {"ok": True, "models": models, "categories": [{"id": c, "label": l, "count": counts[c]} for c, l in library.CATEGORIES], "fits_count": counts["passer"], "source": "ollama.com/library"}
     except Exception as e:
         return {"ok": False, "error": f"Kunne ikke hente modelliste fra ollama.com ({e})", "models": []}
 

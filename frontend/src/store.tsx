@@ -14,7 +14,7 @@ function applyPrefs(p: Prefs) {
 type Ctx = {
   prefs: Prefs; setPrefs: (p: Partial<Prefs>) => void;
   health: Health | null; models: ModelsResp | null; model: string;
-  setModel: (m: string) => void; refresh: () => void;
+  setModel: (m: string) => void; refresh: () => Promise<void>;
   pulls: Record<string, Pull>; pull: (name: string) => void; cancelPull: (name: string) => void;
 };
 const C = createContext<Ctx>(null as unknown as Ctx);
@@ -31,7 +31,7 @@ export function Provider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => {
     api.health().then(setHealth).catch(() => setHealth(null));
-    api.models().then((m) => {
+    return api.models().then((m) => {
       setModels(m);
       setModelState((cur) => (cur && m.models.some((x) => x.name === cur) ? cur : m.models[0]?.name || ""));
     }).catch(() => setModels({ online: false, models: [], error: "Backend svarer ikke" }));

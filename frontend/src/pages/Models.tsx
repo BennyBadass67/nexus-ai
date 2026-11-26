@@ -25,9 +25,15 @@ function PullBar({ name }: { name: string }) {
 function Installed() {
   const { models, model, setModel, refresh } = useApp();
   const [confirm, setConfirm] = useState("");
-  if (models && !models.online) return <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-200">Ollama svarer ikke. Start Ollama (se etter lama-ikonet i systemfeltet) og trykk Oppdater.</div>;
-  if (!models?.models.length) return <div className="rounded-2xl glass-soft p-4 text-sm">Ingen modeller installert ennå. Gå til «Last ned» og velg en. Anbefalt for din PC: qwen2.5:3b.</div>;
-  return (
+  const [checked, setChecked] = useState<Date | null>(null);
+  const [busy, setBusy] = useState(false);
+  const live = () => { setBusy(true); Promise.resolve(refresh()).finally(() => { setChecked(new Date()); setBusy(false); }); };
+  useEffect(() => { live(); const t = setInterval(live, 4000); window.addEventListener("focus", live); return () => { clearInterval(t); window.removeEventListener("focus", live); }; }, []); // eslint-disable-line
+  const stamp = <div className="mb-3 flex items-center gap-3 text-xs text-white/45"><span>{checked ? `Spurt Ollama på denne PC-en kl. ${checked.toLocaleTimeString("nb-NO")}` : "Spør Ollama…"}</span>
+    <button className="rounded-lg glass-soft px-2 py-1 hover:text-white" disabled={busy} onClick={live}>Oppdater nå</button></div>;
+  if (models && !models.online) return <div>{stamp}<div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-200">Ollama svarer ikke. Start Ollama (se etter lama-ikonet i systemfeltet) og trykk Oppdater.</div></div>;
+  if (!models?.models.length) return <div>{stamp}<div className="rounded-2xl glass-soft p-4 text-sm">Ingen modeller installert ennå. Gå til «Last ned» og velg en. Anbefalt for din PC: qwen2.5:3b.</div></div>;
+  return (<div>{stamp}
     <div className="grid gap-3 md:grid-cols-2">
       {models.models.map((m) => (
         <div key={m.name} onClick={() => setModel(m.name)}
@@ -44,7 +50,7 @@ function Installed() {
           </div>
         </div>
       ))}
-    </div>
+    </div></div>
   );
 }
 
@@ -111,11 +117,18 @@ function Browse() {
   const [open, setOpen] = useState<LibModel | null>(null);
   const [tags, setTags] = useState<LibTag[] | null>(null);
   const [manual, setManual] = useState("");
+  const [cats, setCats] = useState<{ id: string; label: string; count: number }[]>([]);
+  const [cat, setCat] = useState("alle");
+  const [fitsCount, setFitsCount] = useState(0);
+  const [limit, setLimit] = useState(24);
   const have = new Set(models?.models.map((m) => m.name) ?? []);
+  const shown = (res ?? []).filter((m) => cat === "alle" || (cat === "passer" ? m.fits : m.categories?.includes(cat)));
+  const CAPL: Record<string, string> = { vision: "bilder", tools: "verktøy", thinking: "tenker", embedding: "embedding", audio: "lyd" };
+  const pullsTxt = (n?: number) => (!n ? "" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : Math.round(n / 1e3) + "K") + " nedlastinger";
 
   useEffect(() => {
-    const t = setTimeout(() => { setErr(""); setRes(null);
-      api.library(q).then((r) => { if (r.ok) setRes(r.models); else setErr(r.error || "Feil"); }).catch((e) => setErr(String(e))); }, 350);
+    const t = setTimeout(() => { setErr(""); setRes(null); setLimit(24);
+      api.library(q).then((r) => { if (r.ok) { setRes(r.models); setCats(r.categories ?? []); setFitsCount(r.fits_count ?? 0); } else setErr(r.error || "Feil"); }).catch((e) => setErr(String(e))); }, 350);
     return () => clearTimeout(t);
   }, [q]);
   useEffect(() => { setTags(null); if (open) api.tags(open.name).then((r) => setTags(r.ok ? r.tags : [])).catch(() => setTags([])); }, [open]);
@@ -149,19 +162,27 @@ function Browse() {
       <div className="relative"><Search size={16} className="absolute left-3.5 top-3 text-white/40" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Søk i Ollama-biblioteket (f.eks. qwen, llama, gemma, phi)…"
           className="w-full rounded-2xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-nx-blue/60" /></div>
+      {res && (<div className="flex flex-wrap items-center gap-1.5 text-xs">
+        {[{ id: "alle", label: "Alle", count: res.length }, { id: "passer", label: "Passer PC-en min", count: fitsCount }, ...cats].map((c) => (
+          <button key={c.id} onClick={() => { setCat(c.id); setLimit(24); }}
+            className={`rounded-full px-3 py-1.5 transition ${cat === c.id ? "bg-nx-blue/30 text-white ring-1 ring-nx-blue/60" : "glass-soft text-white/60 hover:text-white"}`}>{c.label} <span className="text-white/40">{c.count}</span></button>))}
+        <span className="ml-auto text-white/40">{shown.length} modeller · hentet live fra ollama.com</span></div>)}
+      {res && <p className="text-[11px] text-white/35">Kategoriene er utledet fra Ollama sine egenskaper og beskrivelser. Beskrivelsene er Ollama sin egen tekst. Søkefeltet søker i hele registeret på navn og beskrivelse.</p>}
       {err && <div className="rounded-2xl bg-amber-500/10 p-3 text-sm text-amber-200">{err}. Du kan fortsatt skrive modellnavnet manuelt under.</div>}
       {!res && !err && <div className="grid gap-2 md:grid-cols-2">{[0,1,2,3,4,5].map((i) => <div key={i} className="skeleton h-24" />)}</div>}
       <div className="grid gap-2 md:grid-cols-2">
-        {res?.map((m) => (
+        {shown.slice(0, limit).map((m) => (
           <button key={m.name} onClick={() => setOpen(m)} className="rounded-2xl glass-soft p-4 text-left transition hover:bg-white/10">
             <div className="flex items-center justify-between"><span className="font-medium">{m.name}</span>
-              <span className="text-xs text-white/40">{m.downloads >= 1e6 ? (m.downloads / 1e6).toFixed(1) + "M" : Math.round(m.downloads / 1e3) + "K"} nedlastinger</span></div>
+              <span className="text-xs text-white/40">{pullsTxt(m.pulls || m.downloads)}</span></div>
             <div className="mt-1 line-clamp-2 text-xs text-white/60">{m.description}</div>
-            <div className="mt-2 flex flex-wrap gap-1.5">{(m.size_ratings ?? m.sizes.map((l) => ({ label: l, level: "unknown" as const, reason: "", est_gb: null }))).map((r) => <span key={r.label} className="flex items-center gap-1.5 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px]"><Dot level={r.level} reason={r.reason} size={7} />{r.label}</span>)}{m.capabilities.map((s) => <span key={s} className="rounded-md bg-nx-blue/15 px-1.5 py-0.5 text-[11px] text-nx-ice">{s}</span>)}</div>
+            {!!m.categories?.length && <div className="mt-1 text-[11px] text-nx-ice/80">Bra til: {m.categories.map((c) => cats.find((x) => x.id === c)?.label ?? c).join(" · ")}</div>}
+            <div className="mt-2 flex flex-wrap gap-1.5">{(m.size_ratings ?? m.sizes.map((l) => ({ label: l, level: "unknown" as const, reason: "", est_gb: null }))).map((r) => <span key={r.label} className="flex items-center gap-1.5 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px]"><Dot level={r.level} reason={r.reason} size={7} />{r.label}</span>)}{m.capabilities.map((s) => <span key={s} className="rounded-md bg-nx-blue/15 px-1.5 py-0.5 text-[11px] text-nx-ice">{CAPL[s] ?? s}</span>)}</div>
           </button>
         ))}
       </div>
-      {res?.length === 0 && <div className="text-sm text-white/50">Ingen treff.</div>}
+      {res && shown.length > limit && <button className="btn-ghost mx-auto block" onClick={() => setLimit((l) => l + 24)}>Vis flere ({shown.length - limit} igjen)</button>}
+      {res && shown.length === 0 && <div className="text-sm text-white/50">Ingen treff.</div>}
       <div className="rounded-2xl glass-soft p-4">
         <div className="mb-2 text-sm font-medium">Kjenner du navnet? Skriv det inn</div>
         <div className="flex gap-2">

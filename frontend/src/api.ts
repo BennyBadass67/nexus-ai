@@ -14,7 +14,7 @@ export async function j<T>(url: string, init?: RequestInit): Promise<T> {
 
 export type Level = "green" | "yellow" | "red" | "unknown";
 export type SizeRating = { label: string; est_gb: number | null; level: Level; reason: string };
-export type LibModel = { name: string; description: string; downloads: number; sizes: string[]; capabilities: string[]; size_ratings?: SizeRating[] };
+export type LibModel = { name: string; description: string; downloads: number; pulls?: number; categories?: string[]; fits?: boolean; sizes: string[]; capabilities: string[]; size_ratings?: SizeRating[] };
 export type LibTag = { tag: string; size_gb: number; level?: Level; reason?: string };
 export type HW = { cpu: string; cores: number; ram_gb: number; gpu: string | null; vram_gb: number; gpu_vendor: string | null; os: string };
 export type RecModel = { tag: string; size_gb: number; level: Level; reason: string };
@@ -74,7 +74,7 @@ export const api = {
   system: (refresh = false) => j<HW>(`/api/system?refresh=${refresh}`),
   benchmarks: () => j<Record<string, Bench & { at: number }>>("/api/benchmark"),
   benchmark: (model: string) => j<Bench>("/api/benchmark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model }) }),
-  library: (q: string) => j<{ ok: boolean; error?: string; models: LibModel[] }>(`/api/library?q=${encodeURIComponent(q)}`),
+  library: (q: string) => j<{ ok: boolean; error?: string; models: LibModel[]; categories?: { id: string; label: string; count: number }[]; fits_count?: number }>(`/api/library?q=${encodeURIComponent(q)}`),
   tags: (n: string) => j<{ ok: boolean; error?: string; tags: LibTag[] }>(`/api/library/${encodeURIComponent(n)}/tags`),
   deleteModel: (n: string) => j(`/api/models/${encodeURIComponent(n)}`, { method: "DELETE" }),
   health: () => j<Health>("/api/health"),
