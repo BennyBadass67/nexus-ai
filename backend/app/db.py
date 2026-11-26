@@ -73,8 +73,13 @@ CREATE TABLE IF NOT EXISTS settings (
 
 @contextmanager
 def conn():
-    c = sqlite3.connect(config.DB_PATH)
+    c = sqlite3.connect(config.DB_PATH, timeout=15)
     c.row_factory = sqlite3.Row
+    try:
+        c.execute("PRAGMA journal_mode = WAL")        # lesing og skriving blokkerer ikke hverandre (chat + agent + UI samtidig)
+        c.execute("PRAGMA synchronous = NORMAL")
+    except sqlite3.DatabaseError:
+        pass
     c.execute("PRAGMA foreign_keys = ON")
     try:
         yield c

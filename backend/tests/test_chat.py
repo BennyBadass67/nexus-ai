@@ -52,3 +52,22 @@ if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
             f(); print("OK", n)
+
+
+def test_fit_messages_keeps_system_and_newest():
+    from app import ollama
+    msgs = [{"role": "system", "content": "SYS"}] + [{"role": "user" if i % 2 == 0 else "assistant", "content": f"m{i} " + "x" * 600} for i in range(60)]
+    out = ollama.fit_messages(msgs)
+    assert out[0]["content"] == "SYS" and out[-1]["content"] == msgs[-1]["content"]
+    assert len(out) < len(msgs) and sum(ollama.est_tokens(m["content"]) for m in out) <= ollama.PROMPT_BUDGET
+    ids = [int(m["content"].split()[0][1:]) for m in out[1:]]
+    assert ids == sorted(ids) and ids[-1] == 59                  # rekkefølgen er bevart, de nyeste beholdt
+
+
+def test_fit_messages_truncates_huge_last_and_huge_system():
+    from app import ollama
+    out = ollama.fit_messages([{"role": "system", "content": "S" * 50000}, {"role": "user", "content": "Q" * 80000}])
+    assert out[0]["role"] == "system" and out[-1]["role"] == "user"
+    assert sum(ollama.est_tokens(m["content"]) for m in out) <= ollama.PROMPT_BUDGET + 20
+    short = [{"role": "system", "content": "s"}, {"role": "user", "content": "hei"}]
+    assert ollama.fit_messages(short) == short

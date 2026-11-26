@@ -7,6 +7,36 @@ import httpx
 from . import config
 
 
+CTX = 4096
+PROMPT_BUDGET = 2900      # tokens igjen til samtalen; resten er plass til svaret
+
+
+def est_tokens(text: str) -> int:
+    return len(text) // 3 + 4
+
+
+def fit_messages(messages: list[dict], budget: int = PROMPT_BUDGET) -> list[dict]:
+    """Holder prompten innenfor kontekstvinduet. Ollama kutter ellers stille fra starten, og kan miste systemprompten.
+    Beholder systemmeldingen(e) og de nyeste meldingene, og korter ned den nyeste hvis den alene er for stor."""
+    sysm = [m for m in messages if m.get("role") == "system"]
+    rest = [m for m in messages if m.get("role") != "system"]
+    used = sum(est_tokens(str(m.get("content", ""))) for m in sysm)
+    if used > budget // 2:        # lang systemprompt: kort den ned så samtalen får plass
+        keep = max(200, budget // 2) * 3
+        sysm = [{**m, "content": str(m["content"])[:keep]} if m is sysm[0] else m for m in sysm]
+        used = sum(est_tokens(str(m.get("content", ""))) for m in sysm)
+    out: list[dict] = []
+    for m in reversed(rest):
+        t = est_tokens(str(m.get("content", "")))
+        if used + t > budget:
+            if not out:                       # nyeste melding må alltid med, men avkortet
+                room = max(100, budget - used) * 3
+                out.append({**m, "content": str(m["content"])[-room:]})
+            break
+        out.append(m); used += t
+    return sysm + list(reversed(out))
+
+
 async def tags() -> list[dict]:
     async with httpx.AsyncClient(timeout=5) as c:
         r = await c.get(f"{config.OLLAMA_URL}/api/tags")
@@ -27,8 +57,8 @@ async def version() -> str | None:
 async def chat_stream(model: str, messages: list[dict]) -> AsyncIterator[tuple[str, object]]:
     """Gir ("token", tekst) underveis og til slutt ("stats", {tokens, seconds})."""
     # Begrenset kontekst gir mindre minnebruk (viktig på 4 GB GPU / 8 GB RAM). keep_alive holder modellen varm.
-    payload = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m",
-               "options": {"num_ctx": 4096}}
+    payload = {"model": model, "messages": fit_messages(messages), "stream": True, "keep_alive": "10m",
+               "options": {"num_ctx": CTX}}
     async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=5)) as c:
         async with c.stream("POST", f"{config.OLLAMA_URL}/api/chat", json=payload) as r:
             if r.status_code != 200:
@@ -107,7 +137,7 @@ class ToolsUnsupported(RuntimeError):
 
 async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] | None) -> AsyncIterator[tuple[str, object]]:
     """Som chat_stream, men støtter Ollamas verktøykall. Gir ("token", tekst), ("tool_calls", liste), ("stats", ..)."""
-    payload: dict = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m",
+    payload: dict = {"model": model, "messages": fit_messages(messages), "stream": True, "keep_alive": "10m",
                      "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
     if tools:
         payload["tools"] = tools
@@ -148,7 +178,7 @@ async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] 
 
 async def chat_json(model: str, messages: list[dict]) -> str:
     """Ett svar som må være gyldig JSON (Ollama sitt format-json). Brukes til å la modellen foreslå strukturerte ting."""
-    payload = {"model": model, "messages": messages, "stream": False, "format": "json", "keep_alive": "10m",
+    payload = {"model": model, "messages": fit_messages(messages), "stream": False, "format": "json", "keep_alive": "10m",
                "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
     async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=5)) as c:
         r = await c.post(f"{config.OLLAMA_URL}/api/chat", json=payload)
