@@ -65,7 +65,12 @@ function Shell() {
   const pulling = Object.entries(pulls).filter(([, p]) => !p.done && !p.error);
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette((v) => !v); } };
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette((v) => !v); return; }
+      if (e.altKey && !e.ctrlKey && !e.metaKey && /^[0-9]$/.test(e.key)) {            // Alt+1..0 hopper til sidene i menyen
+        const t = NAV[e.key === "0" ? NAV.length - 1 : Number(e.key) - 1]; if (t) { e.preventDefault(); nav(t.id); }
+      }
+    };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, []);
   useEffect(() => { if (palette) api.conversations().then(setConvs).catch(() => {}); }, [palette]);
@@ -101,7 +106,7 @@ function Shell() {
           {NAV.map(({ id, label, icon: Icon }) => (
             <div key={id} className="contents">
               {SECTIONS[id] && <div className={`nav-label hidden px-4 pb-1 md:block ${id === "home" ? "" : "pt-3"}`}>{SECTIONS[id]}</div>}
-              <button onClick={() => nav(id)} title={label}
+              <button onClick={() => nav(id)} title={`${label}`}
                 className={`nav-item relative flex h-11 items-center gap-3 rounded-2xl px-4 text-sm transition-all duration-200 ${page === id ? "on" : ""}`}>
                 <Icon size={18} strokeWidth={page === id ? 2.2 : 1.8} /><span className="hidden md:inline">{label}</span>
                 {id === "models" && pulling.length > 0 && <span className="absolute right-3 top-3.5 h-2 w-2 animate-pulse rounded-full bg-nx-blue" />}
