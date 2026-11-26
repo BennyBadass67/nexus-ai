@@ -178,9 +178,12 @@ export const updateApi = {
   install: () => j<{ ok: boolean; version: string }>("/api/update/install", { method: "POST" }),
 };
 
-export type TeamAgent = { name: string; role: string; prompt: string; tools: string[] };
+export type TeamAgent = { model?: string | null; name: string; role: string; prompt: string; tools: string[] };
 export type TeamProposal = { title: string; agents: TeamAgent[]; mode: "roundrobin" | "leader"; max_rounds: number; model: string };
 export const builderApi = {
-  design: (description: string, model: string) => j<{ proposal: TeamProposal; model_used: string }>("/api/teams/design", { method: "POST", headers: J, body: JSON.stringify({ description, model }) }),
+  designer: () => j<DesignerInfo>("/api/teams/designer"),
+  design: (description: string, model: string) => j<{ proposal: TeamProposal; model_used: string; missing_models: string[]; warning: string | null }>("/api/teams/design", { method: "POST", headers: J, body: JSON.stringify({ description, model }) }),
   create: (p: TeamProposal) => j<Room>("/api/teams/create", { method: "POST", headers: J, body: JSON.stringify(p) }),
 };
+
+export type DesignerInfo = { model: string; size_gb: number; level: "green" | "yellow" | "red"; reason: string; installed: boolean; online: boolean };

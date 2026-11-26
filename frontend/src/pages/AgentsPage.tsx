@@ -179,29 +179,50 @@ function Rooms({ agents, rooms, reload, goAgents }: { agents: AgentDef[]; rooms:
 const IDEAS = ["Et team som hjelper meg med lekser i matte og norsk", "Et team som lager en enkel nettside for en kafé", "Et team som planlegger en tur til Roma"];
 
 function Builder({ done }: { done: () => void }) {
-  const { model, models } = useApp();
+  const { model, models, designer, pulls, pull, cancelPull, refresh } = useApp();
   const [desc, setDesc] = useState("");
   const [prop, setProp] = useState<TeamProposal | null>(null);
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const [missing, setMissing] = useState<string[]>([]); const [warn, setWarn] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [waiting, setWaiting] = useState(false);
   const clean = (e: unknown) => String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1");
-  const design = async () => { setBusy(true); setErr(""); setProp(null);
-    try { const r = await builderApi.design(desc.trim(), model); setProp(r.proposal); } catch (e) { setErr(clean(e)); } finally { setBusy(false); } };
+  const have = new Set((models?.models ?? []).map((m) => m.name));
+  const isIn = (n: string) => have.has(n) || have.has(n + ":latest");
+  const design = async () => { setBusy(true); setErr(""); setProp(null); setWarn(null);
+    try { const r = await builderApi.design(desc.trim(), model); setProp(r.proposal); setMissing(r.missing_models); setWarn(r.warning); } catch (e) { setErr(clean(e)); } finally { setBusy(false); } };
   const create = async () => { if (!prop) return; setBusy(true); setErr("");
-    try { await builderApi.create(prop); done(); } catch (e) { setErr(clean(e)); setBusy(false); } };
+    try { await builderApi.create(prop); done(); } catch (e) { setErr(clean(e)); setBusy(false); setWaiting(false); } };
+  const need = prop ? [...new Set(prop.agents.map((a) => a.model || prop.model))].filter((n) => !isIn(n)) : [];
+  const dl = () => { setErr(""); setWaiting(true); need.forEach((n) => { if (!pulls[n]) pull(n); }); };
+  // Når alle manglende modeller er lastet ned, opprettes teamet automatisk.
+  useEffect(() => { if (waiting && prop && need.length === 0) create(); }, [waiting, models]); // eslint-disable-line
+  useEffect(() => { if (waiting) { const bad = need.find((n) => pulls[n]?.error); if (bad) { setWaiting(false); setErr(`Kunne ikke laste ned ${bad}: ${pulls[bad].error}`); } } }, [pulls]); // eslint-disable-line
   const upd = (i: number, patch: Partial<TeamProposal["agents"][number]>) => prop && setProp({ ...prop, agents: prop.agents.map((a, j) => (j === i ? { ...a, ...patch } : a)) });
+  const pct = (n: string) => { const p = pulls[n]; return p?.total ? Math.round(((p.completed || 0) / p.total) * 100) : 0; };
   const noModel = models && !models.models.length;
   return (
     <div className="glass h-full overflow-auto rounded-[28px] p-6">
       <h2 className="text-lg font-semibold">Bygg et team med assistenten</h2>
       <p className="text-sm text-white/55">Beskriv hva du vil ha hjelp til. Assistenten foreslår agenter med roller. Du ser forslaget og kan endre det før noe opprettes.</p>
+      {designer && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl glass-soft px-4 py-3 text-sm">
+          <span className={`h-2.5 w-2.5 rounded-full ${designer.level === "green" ? "bg-emerald-400" : designer.level === "yellow" ? "bg-amber-400" : "bg-rose-400"}`} />
+          <span>Team-assistent: <b>{designer.model}</b> <span className="text-white/50">(valgt for din PC: {designer.reason || designer.level})</span></span>
+          {designer.installed ? <span className="ml-auto text-xs text-emerald-600">Klar ✓</span>
+            : pulls[designer.model] && !pulls[designer.model].error ? (<span className="ml-auto flex items-center gap-2 text-xs">Laster ned {pct(designer.model)}%
+              <span className="h-1.5 w-28 overflow-hidden rounded-full bg-white/40"><span className="block h-full rounded-full bg-nx-blue transition-all" style={{ width: `${pct(designer.model)}%` }} /></span>
+              <button className="underline" onClick={() => cancelPull(designer.model)}>Avbryt</button></span>)
+            : <button className="btn-ghost ml-auto !py-1 text-xs" onClick={() => { localStorage.removeItem("nexus.designer.skip"); pull(designer.model); }}>Last ned ({designer.size_gb} GB)</button>}
+          {pulls[designer.model]?.error && <span className="w-full text-xs text-rose-700">Nedlasting feilet: {pulls[designer.model].error}</span>}
+        </div>)}
       <textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={1500} placeholder="F.eks. «et team som hjelper meg med lekser»"
         className="mt-4 min-h-[90px] w-full resize-y rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-nx-blue/60" />
       <div className="mt-2 flex flex-wrap gap-1.5">{IDEAS.map((x) => <button key={x} onClick={() => setDesc(x)} className="rounded-lg bg-white/8 px-2.5 py-1 text-xs hover:bg-white/15">{x}</button>)}</div>
       <div className="mt-3 flex items-center gap-3">
-        <button className="btn-primary flex items-center gap-2" disabled={busy || desc.trim().length < 5 || !!noModel} onClick={design}><Sparkles size={14} />{busy && !prop ? "Tenker… (kan ta et minutt)" : "Foreslå team"}</button>
+        <button className="btn-primary flex items-center gap-2" disabled={busy || desc.trim().length < 5 || !!noModel || (!!designer && !designer.installed && !!pulls[designer.model] && !pulls[designer.model].error)} onClick={design}><Sparkles size={14} />{busy && !prop ? "Tenker… (kan ta et minutt)" : "Foreslå team"}</button>
         {noModel && <span className="text-sm text-amber-200">Last ned en modell under Models først.</span>}
         <span className="text-xs text-white/40">Bruker din lokale modell. Små modeller (under 3B) lager ofte dårlige team.</span></div>
-      {err && <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm text-rose-200">{err}</div>}
+      {err && <div className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-sm text-rose-700">{err}</div>}
+      {warn && <div className="mt-3 rounded-2xl bg-amber-400/20 p-3 text-sm text-amber-900">{warn}</div>}
       {prop && (
         <div className="mt-5 space-y-3">
           <div className="flex flex-wrap items-center gap-3"><input value={prop.title} onChange={(e) => setProp({ ...prop, title: e.target.value })} maxLength={80} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium outline-none" />
@@ -211,9 +232,12 @@ function Builder({ done }: { done: () => void }) {
               <input value={a.name} maxLength={30} onChange={(e) => upd(i, { name: e.target.value })} className="w-full bg-transparent text-sm font-semibold outline-none" />
               <input value={a.role} maxLength={200} onChange={(e) => upd(i, { role: e.target.value })} className="mt-1 w-full bg-transparent text-xs text-nx-ice/80 outline-none" />
               <textarea value={a.prompt} maxLength={2000} onChange={(e) => upd(i, { prompt: e.target.value })} className="mt-2 min-h-[70px] w-full resize-y rounded-lg bg-white/5 p-2 text-xs text-white/70 outline-none" />
+              <div className="mt-2 flex items-center gap-2 text-[11px]"><span className="rounded-md bg-white/50 px-1.5 py-0.5 font-medium">{a.model || prop.model}</span>
+                {isIn(a.model || prop.model) ? <span className="text-emerald-600">installert</span> : pulls[a.model || prop.model] ? <span>laster ned {pct(a.model || prop.model)}%</span> : <span className="text-amber-700">må lastes ned</span>}</div>
               {a.tools.length > 0 && <div className="mt-1 text-[11px] text-white/45">Verktøy: {a.tools.join(", ")}</div>}
             </div>))}</div>
-          <div className="flex gap-3"><button className="btn-primary" disabled={busy} onClick={create}>Opprett team</button><button className="btn-ghost" onClick={() => setProp(null)}>Forkast</button></div>
+          <div className="flex gap-3">{need.length === 0 ? <button className="btn-primary" disabled={busy} onClick={create}>Opprett team</button>
+            : <button className="btn-primary" disabled={busy || waiting} onClick={dl}>{waiting ? "Laster ned modeller…" : `Last ned ${need.length} modell${need.length > 1 ? "er" : ""} og opprett`}</button>}<button className="btn-ghost" onClick={() => setProp(null)}>Forkast</button></div>
         </div>)}
     </div>
   );

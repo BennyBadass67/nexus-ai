@@ -72,3 +72,22 @@ def test_create_makes_agents_and_room(monkeypatch):
     assert room["agent_ids"] == [a["id"] for a in ags] and room["mode"] == "leader" and room["max_rounds"] == 3
     bad = {**p, "agents": [p["agents"][0], p["agents"][0]]}
     assert c.post("/api/teams/create", json=bad).status_code == 422
+
+
+def test_designer_choice_and_agent_models(monkeypatch):
+    from app import system
+    hw = system.Hardware(cpu="Ryzen 5 5600H", cores=12, ram_gb=8.0, gpu="NVIDIA GeForce GTX 1650", vram_gb=4.0, gpu_vendor="nvidia", os="Windows")
+    monkeypatch.setattr(system, "hardware", lambda refresh=False: hw)
+    ch = teambuilder.choose_designer(hw)
+    assert ch["model"] == "qwen2.5:3b" and ch["level"] in ("green", "yellow")
+    assert teambuilder.agent_model({"name": "Koder", "role": "skriver Python-kode", "prompt": ""}, "qwen2.5:3b", hw) == "qwen2.5-coder:3b"
+    assert teambuilder.agent_model({"name": "Lærer", "role": "forklarer", "prompt": ""}, "qwen2.5:3b", hw) == "qwen2.5:3b"
+    assert teambuilder.agent_model({"name": "Skribent", "role": "skriver norsk tekst", "prompt": ""}, "qwen2.5:3b", hw) == "qwen2.5:3b"      # gemma3:4b er gul på 4 GB GPU, så den raske velges
+    strong = system.Hardware(cpu="x", cores=16, ram_gb=32.0, gpu="NVIDIA RTX 4070", vram_gb=12.0, gpu_vendor="nvidia", os="Windows")
+    assert teambuilder.agent_model({"name": "Skribent", "role": "skriver norsk tekst", "prompt": ""}, "qwen2.5:3b", strong) == "gemma3:4b"
+    weak = system.Hardware(cpu="x", cores=2, ram_gb=4.0, gpu=None, vram_gb=0, gpu_vendor=None, os="Windows")
+    assert teambuilder.agent_model({"name": "Skribent", "role": "skriver norsk tekst", "prompt": ""}, "qwen2.5:3b", weak) in ("qwen2.5:3b",)
+    calls = fake(monkeypatch, [json.dumps(GOOD)], installed=[{"name": "qwen2.5:3b", "size": 1_900_000_000}])
+    r = c.post("/api/teams/design", json={"description": "hjelp med lekser", "model": "m:1b"}).json()
+    assert calls[0][0] == "qwen2.5:3b" and r["warning"] is None and r["missing_models"] == []
+    assert all(a["model"] == "qwen2.5:3b" for a in r["proposal"]["agents"])

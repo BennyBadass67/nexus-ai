@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import { api, Prefs, Health, ModelsResp, Pull, streamPull } from "./api";
+import { api, builderApi, DesignerInfo, Prefs, Health, ModelsResp, Pull, streamPull } from "./api";
 
 const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "glass", accent: "#e8553f", aurora: "on", perf: "light", reply_lang: "auto", intro: "on" };
 function applyPrefs(p: Prefs) {
@@ -15,7 +15,7 @@ type Ctx = {
   prefs: Prefs; setPrefs: (p: Partial<Prefs>) => void;
   health: Health | null; models: ModelsResp | null; model: string;
   setModel: (m: string) => void; refresh: () => Promise<void>;
-  pulls: Record<string, Pull>; pull: (name: string) => void; cancelPull: (name: string) => void;
+  designer: DesignerInfo | null; pulls: Record<string, Pull>; pull: (name: string) => void; cancelPull: (name: string) => void;
 };
 const C = createContext<Ctx>(null as unknown as Ctx);
 export const useApp = () => useContext(C);
@@ -42,6 +42,7 @@ export function Provider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => { refresh(); const t = setInterval(refresh, 10000); return () => clearInterval(t); }, [refresh]);
+  const [designer, setDesigner] = useState<DesignerInfo | null>(null);
   const [pulls, setPulls] = useState<Record<string, Pull>>({});
   const aborts = useRef<Record<string, AbortController>>({});
   const pull = (name: string) => {
@@ -53,7 +54,13 @@ export function Provider({ children }: { children: ReactNode }) {
       .finally(() => { delete aborts.current[name]; refresh(); api.benchAuto().catch(() => {});
         setTimeout(() => setPulls((p) => (p[name]?.done ? (({ [name]: _, ...r }) => r)(p) : p)), 3000); });
   };
-  const cancelPull = (name: string) => aborts.current[name]?.abort();
+  const cancelPull = (name: string) => { if (name === designer?.model) localStorage.setItem("nexus.designer.skip", "1"); aborts.current[name]?.abort(); };
+  // Team-assistentens modell (valgt ut fra målt maskinvare) lastes ned automatisk første gang, med synlig fremdrift.
+  const online = !!models?.online;
+  useEffect(() => { if (online) builderApi.designer().then(setDesigner).catch(() => {}); }, [online, models?.models.length]);
+  useEffect(() => {
+    if (designer && designer.online && !designer.installed && !pulls[designer.model] && !localStorage.getItem("nexus.designer.skip")) pull(designer.model);
+  }, [designer]); // eslint-disable-line
   const setModel = (m: string) => { localStorage.setItem("nexus.model", m); setModelState(m); };
-  return <C.Provider value={{ prefs, setPrefs, health, models, model, setModel, refresh, pulls, pull, cancelPull }}>{children}</C.Provider>;
+  return <C.Provider value={{ prefs, setPrefs, health, models, model, setModel, refresh, designer, pulls, pull, cancelPull }}>{children}</C.Provider>;
 }
