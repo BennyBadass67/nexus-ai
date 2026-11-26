@@ -125,8 +125,8 @@ def test_leader_mode_follows_choice_and_falls_back(team, monkeypatch):
     rid = api("POST", "/api/rooms", json={"title": "R", "agent_ids": team, "max_rounds": 3, "mode": "leader"}).json()["id"]
     ev = events(rid)
     starts = [e["agent"] for e in ev if e["type"] == "turn_start"]
-    assert starts[0] == "Anna" and starts[1] == "Cato"           # lederen valgte Cato
-    assert len(starts) == 3                                         # uleselig svar => rund-og-rund, så FERDIG
+    assert starts[0] == "Cato"                                      # lederen velger hvem som svarer brukeren først
+    assert starts[1] == "Bjørn" and len(starts) == 2                # uleselig svar => rund-og-rund, så FERDIG
     assert any(e["type"] == "notice" for e in ev)
 
 
@@ -186,3 +186,21 @@ def test_example_room_and_cascade():
     for aid in ex["agent_ids"]:
         api("DELETE", f"/api/agents/{aid}")
     assert api("GET", f"/api/rooms/{ex['id']}").status_code == 404      # tomt rom slettes
+
+
+def test_turn_messages_put_user_question_first():
+    ag = {"name": "Anna", "role": "matematiker", "prompt": "Du elsker tall."}
+    ms = [ag, {"name": "Bjørn", "role": "", "prompt": ""}]
+    log = [{"author": "Du", "content": "Hva er hovedstaden i Frankrike?"}]
+    m = rooms.turn_messages(ag, ms, log)
+    assert "Svar først og fremst direkte" in m[0]["content"] and "Din stil og ekspertise: Du elsker tall." in m[0]["content"]
+    assert "Hva er hovedstaden i Frankrike?" in m[1]["content"].split("Brukerens siste melding")[1]
+
+
+def test_leader_cannot_end_before_first_answer(team, monkeypatch):
+    async def fake(model, messages):
+        yield "token", "FERDIG" if messages[0]["content"].startswith("Du leder") else "Svar."
+    monkeypatch.setattr(ollama, "chat_stream", fake)
+    rid = api("POST", "/api/rooms", json={"title": "R2", "agent_ids": team, "max_rounds": 2, "mode": "leader"}).json()["id"]
+    starts = [e["agent"] for e in events(rid) if e["type"] == "turn_start"]
+    assert len(starts) == 1

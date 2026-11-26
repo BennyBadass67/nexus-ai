@@ -181,14 +181,25 @@ def transcript(msgs: list[dict]) -> str:
     return "\n".join(f"[{m['author']}]: {m['content']}" for m in msgs[-LOG_LIMIT:])
 
 
+def last_user_text(log: list[dict]) -> str:
+    return next((m["content"] for m in reversed(log) if m["author"] == "Du"), "")
+
+
 def turn_messages(ag: dict, members: list[dict], log: list[dict]) -> list[dict]:
     names = ", ".join(f"{m['name']} ({m['role']})" if m["role"] else m["name"] for m in members)
+    q = last_user_text(log)
     system = (f"Du er {ag['name']}" + (f", {ag['role']}" if ag["role"] else "") + ". "
               f"Du er med i et samtalerom med: {names}, og brukeren. "
-              + (ag["prompt"] + " " if ag["prompt"] else "")
+              "VIKTIGST: Svar først og fremst direkte på det brukeren faktisk spør om eller ber om i sin siste melding. "
+              "Rollen din styrer bare vinkel, ekspertise og tonefall. Den er ikke temaet. "
+              "Ikke presenter deg, ikke beskriv rollen din og ikke snakk om oppgaven din med mindre brukeren spør om det. "
+              "Hvis spørsmålet ligger utenfor ekspertisen din, svar likevel kort så godt du kan, og si hvem i rommet som passer bedre. "
+              + (f"Din stil og ekspertise: {ag['prompt']} " if ag["prompt"] else "")
               + "Skriv KUN din egen replikk, uten å skrive for andre og uten å starte med navnet ditt. "
               "Svar på samme språk som brukeren. Svar kort.")
-    user = ("Samtalen så langt:\n" + transcript(log) + f"\n\nDet er din tur, {ag['name']}.")
+    user = ("Samtalen så langt:\n" + transcript(log)
+            + (f"\n\nBrukerens siste melding, som du skal svare direkte på:\n«{q}»" if q else "")
+            + f"\n\nDet er din tur, {ag['name']}.")
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
@@ -216,10 +227,10 @@ async def run_room(room: dict, members: list[dict], user_text: str, default_mode
     while turn < total_turns:
         if run.stop.is_set():
             yield {"type": "stopped"}; return
-        if room["mode"] == "leader" and turn > 0:
+        if room["mode"] == "leader" and len(members) > 1:
             leader = members[0]
-            q = [{"role": "system", "content": "Du leder en gruppesamtale. Svar med KUN navnet på hvem som skal snakke neste gang, eller ordet FERDIG hvis oppgaven er løst. Deltakere: " + ", ".join(m["name"] for m in members)},
-                 {"role": "user", "content": transcript(log) + "\n\nHvem snakker neste gang?"}]
+            q = [{"role": "system", "content": "Du leder en gruppesamtale. Svar med KUN navnet på hvem som skal snakke neste gang, eller ordet FERDIG hvis brukerens siste spørsmål er besvart. Velg den deltakeren som best kan svare på brukerens siste spørsmål. Deltakere: " + ", ".join(f"{m['name']} ({m['role']})" if m["role"] else m["name"] for m in members)},
+                 {"role": "user", "content": transcript(log) + "\n\nBrukerens siste spørsmål: " + user_text + "\nHvem snakker neste gang?"}]
             ans = ""
             try:
                 async for kind, val in ollama.chat_stream(leader["model"] or default_model, q):
@@ -228,6 +239,8 @@ async def run_room(room: dict, members: list[dict], user_text: str, default_mode
             except Exception:
                 ans = ""
             ch = pick_leader_choice(ans, members, last)
+            if ch == "FERDIG" and turn == 0:
+                ch = None                          # første replikk må alltid svare brukeren
             if ch == "FERDIG":
                 yield {"type": "notice", "text": "Lederen avsluttet samtalen."}; break
             nxt = next((m for m in members if m["name"] == ch), None) if ch else None
