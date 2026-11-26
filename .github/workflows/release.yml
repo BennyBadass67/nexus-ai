@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.9.0: Skjermstyring (fase 3). Agenter kan se skjermen (lokal visjonsmodell) og styre mus og tastatur, med godkjenning for hver handling. Av som standard, slås på i Innstillinger. Nødstopp: musen i øvre venstre hjørne."
+          releaseBody: "0.9.1: Team-chat: agentene svarer nå direkte på spørsmålet ditt først, og rollen styrer bare stil. Lederen velger hvem som svarer først."
           releaseDraft: false
           prerelease: false
