@@ -108,7 +108,7 @@ class ToolsUnsupported(RuntimeError):
 async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] | None) -> AsyncIterator[tuple[str, object]]:
     """Som chat_stream, men støtter Ollamas verktøykall. Gir ("token", tekst), ("tool_calls", liste), ("stats", ..)."""
     payload: dict = {"model": model, "messages": messages, "stream": True, "keep_alive": "10m",
-                     "options": {"num_ctx": 4096, "temperature": 0.3}}
+                     "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
     if tools:
         payload["tools"] = tools
     async with httpx.AsyncClient(timeout=httpx.Timeout(600, connect=5)) as c:
@@ -144,3 +144,18 @@ async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] 
                     if n and ns:
                         yield "stats", {"tokens": n, "seconds": round(ns / 1e9, 2)}
                     break
+
+
+async def chat_json(model: str, messages: list[dict]) -> str:
+    """Ett svar som må være gyldig JSON (Ollama sitt format-json). Brukes til å la modellen foreslå strukturerte ting."""
+    payload = {"model": model, "messages": messages, "stream": False, "format": "json", "keep_alive": "10m",
+               "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=5)) as c:
+        r = await c.post(f"{config.OLLAMA_URL}/api/chat", json=payload)
+        if r.status_code != 200:
+            try:
+                msg = r.json().get("error", r.text)
+            except Exception:
+                msg = r.text
+            raise RuntimeError(msg or f"Ollama svarte {r.status_code}")
+        return r.json().get("message", {}).get("content", "")

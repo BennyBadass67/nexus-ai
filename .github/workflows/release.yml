@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.5: Installer nå-knappen i Settings laster faktisk ned, sjekker og kjører installeren, og appen starter på nytt med ny versjon. Feil (avbrutt nedlasting, ugyldig fil, installasjon som feiler) vises tydelig. Inneholder ikon-cache-fiksen fra 0.7.4."
+          releaseBody: "0.7.6: Modellbibliotek med hele Ollama-registeret (live fra ollama.com), kategorier (koding, bilder, verktøy, resonnering, liten m.fl.), Passer PC-en min og Ollama sine beskrivelser. Installert-fanen spør Ollama direkte hver gang."
           releaseDraft: false
           prerelease: false

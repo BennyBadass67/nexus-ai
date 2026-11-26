@@ -12,13 +12,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, library, memory, ollama, rooms, system, tools, update, workspace
+from . import agent, config, db, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
 app = FastAPI(title="NEXUS AI", version="0.1.0")
 db.init()
 app.include_router(rooms.router)
+app.include_router(teambuilder.router)
 app.include_router(update.router)
 app.include_router(memory.router)
 app.include_router(workspace.router)
