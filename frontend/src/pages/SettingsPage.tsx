@@ -14,6 +14,11 @@ const PERSONAS = [
   { label: "Kodehjelper", text: "Du er en erfaren utvikler. Gi kjørbar kode først, korte forklaringer etterpå." },
 ];
 
+function Sec({ t, d, children }: { t: string; d?: string; children: React.ReactNode }) {
+  return (
+    <section className="glass-soft rounded-2xl p-5"><h2 className="font-semibold">{t}</h2>{d && <p className="mb-4 mt-0.5 text-xs text-white/50">{d}</p>}{!d && <div className="mb-3" />}{children}</section>);
+}
+
 export default function SettingsPage() {
   const [upd, setUpd] = useState<UpdateInfo | null>(null); const [updBusy, setUpdBusy] = useState(false);
   const checkUpd = () => { setUpdBusy(true); updateApi.check().then(setUpd).catch((e) => setUpd({ current: "?", latest: null, available: false, url: null, notes: "", error: String(e) })).finally(() => setUpdBusy(false)); };
@@ -30,8 +35,6 @@ export default function SettingsPage() {
   const dirty = name !== prefs.agent_name || user !== prefs.user_name || persona !== prefs.persona;
   const save = () => { setPrefs({ agent_name: name.trim() || "NEXUS", user_name: user.trim() || "Benjamin", persona }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   const field = "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-nx-blue/60";
-  const Sec = ({ t, d, children }: { t: string; d?: string; children: React.ReactNode }) => (
-    <section className="glass-soft rounded-2xl p-5"><h2 className="font-semibold">{t}</h2>{d && <p className="mb-4 mt-0.5 text-xs text-white/50">{d}</p>}{!d && <div className="mb-3" />}{children}</section>);
   return (
     <div className="h-full space-y-3 overflow-auto pr-1">
       <div className="glass rounded-[28px] p-6"><h1 className="text-xl font-semibold">Tilpass</h1>

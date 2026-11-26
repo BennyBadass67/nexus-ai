@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.2: Nytt app-ikon (din logo) i oppgavelinjen, installeren og appen. Inneholder installasjonsfiksen og oppdateringssjekken fra 0.7.1."
+          releaseBody: "0.7.3: Fikser at skrivefeltene i Settings mistet fokus for hver bokstav og at skjermen hoppet. Testet med automatisk skrivetest i Settings, Memory, Assistant og Agents. Inneholder alt fra 0.7.0 til 0.7.2."
           releaseDraft: false
           prerelease: false
