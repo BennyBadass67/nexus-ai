@@ -15,6 +15,14 @@ function Cards({ model }: { model: string }) {
   const startQuiz = async (d: Deck) => {
     try { const qs = await studyApi.quiz(d.id); setErr(""); setOk(""); setQuiz({ deck: d, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
   };
+  const [expl, setExpl] = useState(""); const [explBusy, setExplBusy] = useState(false);
+  const explain = async () => {
+    if (!quiz || quiz.pick === null) return; const q = quiz.qs[quiz.i];
+    setExpl(""); setExplBusy(true);
+    const prompt = `Du er en vennlig lærer. Forklar på norsk, i 2-3 korte setninger, hvorfor riktig svar på spørsmålet er riktig, og hvorfor det valgte svaret ikke stemmer.\nSpørsmål: ${q.question}\nRiktig svar: ${q.options[q.answer]}\nEleven valgte: ${q.options[quiz.pick]}`;
+    try { await studyApi.complete(model, prompt, (t) => setExpl((e) => e + t)); } catch (e) { setExpl("Kunne ikke hente forklaring: " + clean(e)); }
+    setExplBusy(false);
+  };
   const startWeak = async () => {
     try { const qs = await studyApi.weak(10); setErr(""); setOk(""); setQuiz({ deck: { id: 0, title: "Svake kort (alle stokker)" } as Deck, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
   };
@@ -24,7 +32,7 @@ function Cards({ model }: { model: string }) {
     setQuiz({ ...quiz, pick: k, right: quiz.right + (good ? 1 : 0) });
   };
   const nextQ = () => {
-    if (!quiz) return;
+    if (!quiz) return; setExpl("");
     if (quiz.i + 1 >= quiz.qs.length) { setOk(`Quiz ferdig: ${quiz.right} av ${quiz.qs.length} riktige.`); setQuiz(null); load(); }
     else setQuiz({ ...quiz, i: quiz.i + 1, pick: null });
   };
@@ -63,6 +71,11 @@ function Cards({ model }: { model: string }) {
             return <button key={k} onClick={() => answer(k)} className={`glass-soft animate-rise rounded-2xl px-4 py-3 text-left text-sm transition hover:bg-white/15 ${st}`} style={{ animationDelay: k * 50 + "ms" }}>{o}{quiz.pick !== null && k === q.answer && <span className="ml-2 text-xs">✓ riktig</span>}{quiz.pick === k && k !== q.answer && <span className="ml-2 text-xs">✗ feil</span>}</button>;
           })}
         </div>
+        {quiz.pick !== null && quiz.pick !== q.answer && (
+          <div className="mt-4">
+            {!expl && !explBusy && <button className="btn-ghost" onClick={explain}><Sparkles size={14} /> Forklar hvorfor</button>}
+            {(expl || explBusy) && <div className="glass-soft animate-rise rounded-2xl p-4 text-sm leading-relaxed">{expl || "Tenker…"}</div>}
+          </div>)}
         {quiz.pick !== null && <button className="btn-primary mt-4 self-end" onClick={nextQ}>{quiz.i + 1 >= quiz.qs.length ? "Se resultat" : "Neste"}</button>}
         <button onClick={() => { setQuiz(null); load(); }} className="mt-4 self-center text-xs text-white/60 underline">Avslutt quiz</button>
       </div>
