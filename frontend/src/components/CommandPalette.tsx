@@ -3,11 +3,21 @@ import { Search, CornerDownLeft } from "lucide-react";
 
 export type Cmd = { id: string; label: string; hint?: string; run: () => void };
 
-export default function CommandPalette({ open, onClose, cmds }: { open: boolean; onClose: () => void; cmds: Cmd[] }) {
+export default function CommandPalette({ open, onClose, cmds, remote }: { open: boolean; onClose: () => void; cmds: Cmd[]; remote?: (q: string) => Promise<Cmd[]> }) {
   const [q, setQ] = useState(""); const [sel, setSel] = useState(0);
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (open) { setQ(""); setSel(0); setTimeout(() => ref.current?.focus(), 30); } }, [open]);
-  const list = useMemo(() => cmds.filter((c) => (c.label + " " + (c.hint || "")).toLowerCase().includes(q.toLowerCase())).slice(0, 9), [q, cmds]);
+  const [hits, setHits] = useState<Cmd[]>([]);
+  useEffect(() => {
+    if (!remote || q.trim().length < 2) { setHits([]); return; }
+    let on = true; const t = setTimeout(() => remote(q.trim()).then((r) => on && setHits(r)).catch(() => on && setHits([])), 180);
+    return () => { on = false; clearTimeout(t); };
+  }, [q]); // eslint-disable-line
+  const list = useMemo(() => {
+    const local = cmds.filter((c) => (c.label + " " + (c.hint || "")).toLowerCase().includes(q.toLowerCase()));
+    const ids = new Set(local.map((c) => c.id));
+    return [...local.slice(0, 6), ...hits.filter((h) => !ids.has(h.id))].slice(0, 12);
+  }, [q, cmds, hits]);
   if (!open) return null;
   const go = (c?: Cmd) => { if (c) { onClose(); c.run(); } };
   return (

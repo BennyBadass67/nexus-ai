@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Folder, FileText, ArrowUp, ExternalLink, Loader2, ChevronRight, Lock } from "lucide-react";
+import KnowledgePanel from "../components/KnowledgePanel";
 import { wsApi, WsList, WsFile, fmtSize } from "../api";
 
 export default function WorkspacePage({ goSettings }: { goSettings: () => void }) {
+  const [tab, setTab] = useState<"files" | "k">("files");
   const [roots, setRoots] = useState<string[]>([]);
   const [cur, setCur] = useState<WsList | null>(null);
   const [file, setFile] = useState<WsFile | null>(null);
@@ -18,12 +20,15 @@ export default function WorkspacePage({ goSettings }: { goSettings: () => void }
       <div className="flex items-center gap-3">
         <div><h1 className="text-xl font-semibold">Workspace</h1>
           <p className="text-sm text-white/50">Mappene agenten har lov til å jobbe i. Alt utenfor er låst.</p></div>
-        <button onClick={goSettings} className="ml-auto rounded-2xl glass-soft px-3 py-2 text-xs text-white/70 hover:text-white">Endre mapper</button>
+        <div className="ml-auto flex gap-1 rounded-2xl glass-soft p-1 text-sm">
+          {([["files", "Filer"], ["k", "Kunnskap"]] as const).map(([id, l]) => <button key={id} onClick={() => setTab(id)} className={`rounded-xl px-3 py-1.5 transition ${tab === id ? "bg-white/15 font-medium" : "text-white/60"}`}>{l}</button>)}</div>
+        <button onClick={goSettings} className="rounded-2xl glass-soft px-3 py-2 text-xs text-white/70 hover:text-white">Endre mapper</button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {roots.map((r) => <button key={r} onClick={() => go(r)} className="flex items-center gap-2 rounded-full glass-soft px-3 py-1.5 text-xs text-white/70 hover:text-white"><Lock size={11} className="text-nx-blue" />{r}</button>)}
       </div>
       {err && <div className="mt-2 text-sm text-rose-300">{err}</div>}
+      {tab === "k" ? <KnowledgePanel /> : (
       <div className="mt-3 flex min-h-0 flex-1 gap-3">
         <div className="flex min-w-0 flex-1 flex-col rounded-2xl glass-soft p-3">
           <div className="mb-2 flex items-center gap-1 overflow-x-auto whitespace-nowrap text-xs text-white/45">
@@ -51,7 +56,7 @@ export default function WorkspacePage({ goSettings }: { goSettings: () => void }
               : <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-white/80">{file.text}{file.truncated ? "\n[… avkortet]" : ""}</pre>}
           </>)}
         </div>
-      </div>
+      </div>)}
     </div>
   );
 }

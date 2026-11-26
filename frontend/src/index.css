@@ -233,3 +233,4 @@ html.light .upd-bar { background: rgba(30,41,59,.12); }
 .upd-toast .upd-h { color: #fff !important; } .upd-toast .upd-s { color: rgba(255,255,255,.82) !important; }
 .upd .btn, .upd .btn-primary { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 html.glass .upd-ring.on { background: #1d1411; color: #fff; }
+.sysbar { background: linear-gradient(90deg, rgb(var(--accent-deep)), rgb(var(--accent))); }

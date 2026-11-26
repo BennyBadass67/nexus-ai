@@ -187,3 +187,25 @@ export const builderApi = {
 };
 
 export type DesignerInfo = { model: string; size_gb: number; level: "green" | "yellow" | "red"; reason: string; installed: boolean; online: boolean };
+
+export type Note = { id: number; text: string; done: boolean; due: string | null; source: string; created_at: number };
+export type Tpl = { id: number; title: string; body: string };
+export type SearchRes = { query: string; conversations: { id: number; title: string; snippet: string }[]; memories: { id: number; content: string; kind: string }[]; agents: { id: number; name: string; role: string }[]; notes: { id: number; text: string; done: boolean }[]; rooms: { id: number; title: string; snippet: string; author: string }[]; activity: { id: number; tool: string; detail: string; status: string }[] };
+export type SysMon = { cpu_pct: number | null; ram_used_gb: number | null; ram_total_gb: number | null; ram_pct: number | null; loaded: { name: string; size_gb: number; vram_gb: number }[] | null };
+export type KHit = { path: string; pos: number; score: number; text: string };
+export const extrasApi = {
+  search: (q: string) => j<SearchRes>("/api/search?q=" + encodeURIComponent(q)),
+  notes: () => j<Note[]>("/api/notes"),
+  addNote: (text: string, due?: string) => j<{ id: number }>("/api/notes", { method: "POST", headers: J, body: JSON.stringify({ text, due: due || null }) }),
+  patchNote: (id: number, body: Partial<{ done: boolean; text: string }>) => j<{ ok: boolean }>("/api/notes/" + id, { method: "PATCH", headers: J, body: JSON.stringify(body) }),
+  delNote: (id: number) => j<{ ok: boolean }>("/api/notes/" + id, { method: "DELETE" }),
+  templates: () => j<Tpl[]>("/api/templates"),
+  addTemplate: (title: string, body: string) => j<{ id: number }>("/api/templates", { method: "POST", headers: J, body: JSON.stringify({ title, body }) }),
+  delTemplate: (id: number) => j<{ ok: boolean }>("/api/templates/" + id, { method: "DELETE" }),
+  sysmon: () => j<SysMon>("/api/sysmon"),
+  kStatus: () => j<{ files: number; chunks: number }>("/api/knowledge/status"),
+  kIndex: () => j<{ added: number; updated: number; removed: number; skipped: number; files: number; chunks: number }>("/api/knowledge/index", { method: "POST" }),
+  kSearch: (q: string) => j<KHit[]>("/api/knowledge/search?q=" + encodeURIComponent(q)),
+  kClear: () => j<{ ok: boolean }>("/api/knowledge", { method: "DELETE" }),
+  restore: async (file: File) => { const r = await fetch("/api/backup/restore", { method: "POST", headers: { "content-type": "application/octet-stream" }, body: file }); if (!r.ok) throw new Error(String((await r.json().catch(() => ({ detail: r.statusText }))).detail)); return r.json() as Promise<{ ok: boolean; restored: Record<string, number>; safety_copy: string }>; },
+};

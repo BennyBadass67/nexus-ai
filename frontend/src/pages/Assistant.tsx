@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench } from "lucide-react";
-import { api, Conv, Msg, Step, streamAgent, streamChat } from "../api";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText } from "lucide-react";
+import { api, Conv, extrasApi, Msg, Step, streamAgent, streamChat, Tpl } from "../api";
 import Steps from "../components/Steps";
 import { useApp } from "../store";
 import Markdown from "../components/Markdown";
@@ -24,6 +24,14 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [pick, setPick] = useState(false);
+  const [tpls, setTpls] = useState<Tpl[]>([]); const [tplOpen, setTplOpen] = useState(false);
+  const fileIn = useRef<HTMLInputElement>(null);
+  const attach = async (f: File) => {
+    if (f.size > 120_000) { setErr(`${f.name} er for stor (maks 120 kB tekst). Bruk Kunnskap under Workspace for store filer.`); return; }
+    const t = await f.text();
+    if (t.includes("\u0000")) { setErr(`${f.name} ser ikke ut som en tekstfil.`); return; }
+    setErr(""); setText((x) => (x ? x + "\n\n" : "") + "Fil: " + f.name + "\n```\n" + t + "\n```\n");
+  };
   const [copied, setCopied] = useState<number | null>(null);
   const abort = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -143,6 +151,18 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
             <textarea ref={area} value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={`Skriv til ${prefs.agent_name}…`} autoFocus
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               className="max-h-44 min-h-[40px] flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-white/30" />
+            <input ref={fileIn} type="file" className="hidden" accept=".txt,.md,.csv,.json,.py,.js,.ts,.tsx,.html,.css,.log,.yaml,.yml,.xml,.sql,.java,.c,.cpp,.cs,.go,.rs" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) attach(f); }} />
+            <button onClick={() => fileIn.current?.click()} title="Legg ved tekstfil" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><Paperclip size={16} /></button>
+            <div className="relative">
+              <button onClick={() => { setTplOpen((v) => !v); extrasApi.templates().then(setTpls).catch(() => {}); }} title="Maler" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><FileText size={16} /></button>
+              {tplOpen && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setTplOpen(false)} />
+                <div className="glass absolute bottom-12 right-0 z-30 w-72 animate-pop rounded-2xl p-1.5">
+                  {tpls.length === 0 && <div className="p-3 text-xs text-white/60">Ingen maler. Lag dem under Notater, fanen Maler.</div>}
+                  {tpls.map((t) => <button key={t.id} onClick={() => { setText((x) => (x ? x + "\n" : "") + t.body); setTplOpen(false); area.current?.focus(); }} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-white/10"><div className="font-medium">{t.title}</div><div className="truncate text-xs text-white/55">{t.body}</div></button>)}
+                </div></>)}
+            </div>
+            {cid && msgs.length > 0 && <a href={`/api/conversations/${cid}/export`} download title="Last ned samtalen som Markdown" className="grid h-10 w-10 place-items-center rounded-xl text-white/55 transition hover:bg-white/10"><Download size={16} /></a>}
             <button onClick={() => setAgentMode(!agentMode)} title={agentMode ? "Agent-modus er på: kan bruke filer og nett" : "Slå på agent-modus"}
               className={`grid h-10 w-10 place-items-center rounded-xl transition ${agentMode ? "bg-nx-blue/25 text-nx-ice ring-1 ring-nx-blue/60" : "text-white/45 hover:bg-white/10"}`}><Wrench size={16} /></button>
             <div className="relative">

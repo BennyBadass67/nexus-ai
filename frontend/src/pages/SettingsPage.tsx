@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, MoonStar, Check, Sparkles } from "lucide-react";
 import { api, ToolInfo } from "../api";
+import { extrasApi } from "../api";
 import UpdateCard from "../components/UpdateCard";
 import { useApp } from "../store";
 
@@ -21,6 +22,7 @@ function Sec({ t, d, children }: { t: string; d?: string; children: React.ReactN
 }
 
 export default function SettingsPage() {
+  const [bk, setBk] = useState("");
   const { health, model, prefs, setPrefs } = useApp();
   const [name, setName] = useState(prefs.agent_name);
   const [user, setUser] = useState(prefs.user_name);
@@ -98,6 +100,20 @@ export default function SettingsPage() {
 
       <Sec t="Oppdateringer" d="Sjekker GitHub for en nyere versjon.">
         <UpdateCard />
+      </Sec>
+
+      <Sec t="Sikkerhetskopi" d="Alle samtaler, minner, agenter, team og notater i én fil. Lagres bare der du velger.">
+        <div className="flex flex-wrap items-center gap-3">
+          <a className="btn-primary inline-flex items-center gap-2" href="/api/backup" download>Last ned sikkerhetskopi</a>
+          <label className="btn inline-flex cursor-pointer items-center gap-2">Gjenopprett fra fil
+            <input type="file" accept=".db" className="hidden" onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+              if (!confirm("Dette erstatter ALT i NEXUS med innholdet i filen. En kopi av dagens data lagres først. Fortsette?")) return;
+              setBk("Gjenoppretter…");
+              try { const r = await extrasApi.restore(f); setBk(`Ferdig: ${r.restored.conversations} samtaler, ${r.restored.memories} minner, ${r.restored.agents} agenter. Last appen på nytt (Ctrl+R).`); } catch (er) { setBk("Feilet: " + String(er).replace(/^Error: /, "")); }
+            }} /></label>
+        </div>
+        {bk && <p className="mt-2 text-sm text-white/80">{bk}</p>}
       </Sec>
 
       <Sec t="Status">

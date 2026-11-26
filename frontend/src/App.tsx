@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command } from "lucide-react";
+import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command, StickyNote } from "lucide-react";
 import { Provider, useApp } from "./store";
-import { api, Conv, updateApi } from "./api";
+import { api, Conv, extrasApi, updateApi } from "./api";
 import { UpdatedToast } from "./components/UpdateCard";
 import HomePage from "./pages/HomePage";
 import Assistant from "./pages/Assistant";
@@ -12,6 +12,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ActivityPage from "./pages/ActivityPage";
 import AgentsPage from "./pages/AgentsPage";
 import Intro from "./components/Intro";
+import NotesPage from "./pages/NotesPage";
 import CommandPalette, { Cmd } from "./components/CommandPalette";
 
 const SECTIONS: Record<string, string> = { home: "Hoved", workspace: "Arbeid", activity: "System" };
@@ -23,6 +24,7 @@ const NAV = [
   { id: "workspace", label: "Workspace", icon: FolderOpen },
   { id: "automations", label: "Agenter", icon: Workflow },
   { id: "memory", label: "Memory", icon: Brain },
+  { id: "notes", label: "Notater", icon: StickyNote },
   { id: "activity", label: "Activity", icon: Activity },
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
@@ -66,6 +68,17 @@ function Shell() {
     ...convs.map((c) => ({ id: "c" + c.id, label: c.title, hint: "Samtale", run: () => { setOpenConv(c.id); nav("assistant"); } })),
   ], [models, convs, model]); // eslint-disable-line
 
+  const remote = async (q: string): Promise<Cmd[]> => {
+    const r = await extrasApi.search(q);
+    return [
+      ...r.conversations.map((c) => ({ id: "sc" + c.id, label: c.title, hint: "Samtale · " + c.snippet.slice(0, 50), run: () => { setOpenConv(c.id); nav("assistant"); } })),
+      ...r.memories.map((m) => ({ id: "sm" + m.id, label: m.content.slice(0, 70), hint: "Minne", run: () => nav("memory") })),
+      ...r.notes.map((n) => ({ id: "sn" + n.id, label: n.text.slice(0, 70), hint: "Notat", run: () => nav("notes") })),
+      ...r.agents.map((g) => ({ id: "sa" + g.id, label: g.name, hint: "Agent · " + g.role, run: () => nav("automations") })),
+      ...r.rooms.map((m) => ({ id: "sr" + m.id, label: m.title, hint: "Team-chat · " + m.snippet.slice(0, 40), run: () => nav("automations") })),
+    ];
+  };
+
   return (
     <div className="flex h-full gap-3 p-3">
       <nav className="glass relative flex w-[76px] flex-col items-center gap-1 rounded-[28px] py-4 md:w-60 md:items-stretch md:px-3">
@@ -105,12 +118,13 @@ function Shell() {
           {page === "workspace" && <WorkspacePage goSettings={() => nav("settings")} />}
           {page === "automations" && <AgentsPage />}
           {page === "memory" && <MemoryPage />}
+          {page === "notes" && <NotesPage />}
           {page === "activity" && <ActivityPage />}
           {page === "settings" && <SettingsPage />}
         </div>
       </main>
       {updated && <UpdatedToast version={updated.v} notes={updated.notes} onClose={() => setUpdated(null)} />}
-      <CommandPalette open={palette} onClose={() => setPalette(false)} cmds={cmds} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} cmds={cmds} remote={remote} />
     </div>
   );
 }
