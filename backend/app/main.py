@@ -12,13 +12,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
+from . import projects, agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
 app = FastAPI(title="NEXUS AI", version="0.1.0")
 db.init()
 app.include_router(rooms.router)
+app.include_router(projects.router)
 app.include_router(teambuilder.router)
 app.include_router(update.router)
 app.include_router(memory.router)
@@ -49,7 +50,7 @@ def get_prefs() -> dict:
     return out
 
 
-def build_system_prompt(p: dict) -> str:
+def build_system_prompt(p: dict, cid: int | None = None) -> str:
     base = (f"Du er {p['agent_name']}, en personlig KI-assistent som kjører lokalt på brukerens PC. "
             f"Brukeren heter {p['user_name']}. Svar på samme språk som brukeren, kort og presist.")
     if p.get("persona", "").strip():
@@ -57,7 +58,7 @@ def build_system_prompt(p: dict) -> str:
     mem = memory.context()
     if mem:
         base += "\n\n" + mem
-    return base
+    return base + projects.instructions_for(cid)
 
 
 @app.get("/api/health")
@@ -85,7 +86,7 @@ async def models():
 @app.get("/api/conversations")
 def list_conversations():
     with db.conn() as c:
-        rows = c.execute("SELECT id,title,model,updated_at FROM conversations "
+        rows = c.execute("SELECT id,title,model,updated_at,project_id FROM conversations "
                          "ORDER BY updated_at DESC").fetchall()
     return [dict(r) for r in rows]
 
@@ -128,8 +129,8 @@ async def chat(req: ChatRequest):
         cid = req.conversation_id
         if cid is None:
             title = req.message.strip().replace("\n", " ")[:48]
-            cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at) "
-                            "VALUES(?,?,?,?)", (title, req.model, db.now(), db.now())).lastrowid
+            cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at,project_id) "
+                            "VALUES(?,?,?,?,?)", (title, req.model, db.now(), db.now(), req.project_id)).lastrowid
         elif not c.execute("SELECT 1 FROM conversations WHERE id=?", (cid,)).fetchone():
             raise HTTPException(404, "Samtalen finnes ikke")
         if req.regenerate:
@@ -142,7 +143,7 @@ async def chat(req: ChatRequest):
                       (cid, "user", req.message, db.now()))
         hist = c.execute("SELECT role,content FROM messages WHERE conversation_id=? "
                          "ORDER BY id DESC LIMIT ?", (cid, HISTORY_LIMIT)).fetchall()
-    messages = [{"role": "system", "content": build_system_prompt(get_prefs())}] + \
+    messages = [{"role": "system", "content": build_system_prompt(get_prefs(), cid)}] + \
                [dict(r) for r in reversed(hist)]
 
     async def gen():
@@ -178,6 +179,7 @@ class AgentRunReq(BaseModel):
     model: str = Field(min_length=1)
     conversation_id: Optional[int] = None
     text_mode: bool = False
+    project_id: Optional[int] = None
 
 
 class ApproveReq(BaseModel):
@@ -191,8 +193,8 @@ async def agent_run(req: AgentRunReq):
     with db.conn() as c:
         cid = req.conversation_id
         if cid is None:
-            cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at) VALUES(?,?,?,?)",
-                            (req.message.strip().replace("\n", " ")[:48], req.model, db.now(), db.now())).lastrowid
+            cid = c.execute("INSERT INTO conversations(title,model,created_at,updated_at,project_id) VALUES(?,?,?,?,?)",
+                            (req.message.strip().replace("\n", " ")[:48], req.model, db.now(), db.now(), req.project_id)).lastrowid
         elif not c.execute("SELECT 1 FROM conversations WHERE id=?", (cid,)).fetchone():
             raise HTTPException(404, "Samtalen finnes ikke")
         c.execute("INSERT INTO messages(conversation_id,role,content,created_at) VALUES(?,?,?,?)",
@@ -207,7 +209,7 @@ async def agent_run(req: AgentRunReq):
         yield _ev(type="meta", conversation_id=cid, model=req.model, run_id=run.id, provider=("cloud" if cloud.is_cloud(req.model) else "ollama"))
         final = ""
         try:
-            async for e in agent.run_agent(run, req.model, msgs, build_system_prompt(get_prefs()), req.text_mode):
+            async for e in agent.run_agent(run, req.model, msgs, build_system_prompt(get_prefs(), cid), req.text_mode):
                 if e["type"] == "token":
                     final += e["text"]
                 elif e["type"] == "final":

@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
     model: str = Field(min_length=1)
     conversation_id: Optional[int] = None
     regenerate: bool = False
+    project_id: Optional[int] = None
 
 
 class RenameRequest(BaseModel):

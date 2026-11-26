@@ -1,7 +1,8 @@
 export type Health = { backend: string; ollama_online: boolean; ollama_version: string | null; conversations: number };
 export type ModelInfo = { name: string; size: number; params?: string; quant?: string; cloud?: boolean; provider?: string };
 export type ModelsResp = { online: boolean; error?: string; models: ModelInfo[] };
-export type Conv = { id: number; title: string; model: string | null; updated_at: number };
+export type Conv = { id: number; title: string; model: string | null; updated_at: number; project_id?: number | null };
+export type Project = { id: number; name: string; instructions: string; chats: number };
 export type Step = { call_id: string; tool: string; describe: string; risk: string; status: "running" | "waiting" | "ok" | "error" | "denied"; result?: string };
 export type Msg = { id?: number; role: "user" | "assistant"; content: string; model?: string | null; tps?: number; steps?: Step[] };
 export type ConvFull = { id: number; title: string; model: string | null; messages: Msg[] };
@@ -99,9 +100,9 @@ export type ChatEvent =
   | { type: "done" };
 
 /** Leser NDJSON-strømmen fra /api/chat og kaller onEvent for hver hendelse. */
-export const streamChat = (body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean },
+export const streamChat = (body: { message: string; model: string; conversation_id?: number | null; regenerate?: boolean; project_id?: number | null },
   onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/chat", body, onEvent, signal);
-export const streamAgent = (body: { message: string; model: string; conversation_id?: number | null; text_mode?: boolean },
+export const streamAgent = (body: { message: string; model: string; conversation_id?: number | null; text_mode?: boolean; project_id?: number | null },
   onEvent: (e: ChatEvent) => void, signal: AbortSignal) => ndjson("/api/agent/run", body, onEvent, signal);
 
 async function ndjson(url: string, body: object, onEvent: (e: ChatEvent) => void, signal: AbortSignal) {
@@ -253,4 +254,12 @@ export const cloudApi = {
   save: (id: string, b: Record<string, unknown>) => j<CloudProv>("/api/cloud/providers/" + id, { method: "PUT", headers: J, body: JSON.stringify(b) }),
   forget: (id: string) => j<CloudProv>("/api/cloud/providers/" + id, { method: "DELETE" }),
   test: (id: string) => j<{ ok: boolean; error?: string; model?: string; reply?: string; models?: string[] }>("/api/cloud/providers/" + id + "/test", { method: "POST" }),
+};
+
+export const projectsApi = {
+  list: () => j<Project[]>("/api/projects"),
+  create: (b: { name: string; instructions: string }) => j<{ id: number }>("/api/projects", { method: "POST", headers: J, body: JSON.stringify(b) }),
+  patch: (id: number, b: { name?: string; instructions?: string }) => j("/api/projects/" + id, { method: "PATCH", headers: J, body: JSON.stringify(b) }),
+  remove: (id: number) => j("/api/projects/" + id, { method: "DELETE" }),
+  assign: (cid: number, project_id: number | null) => j(`/api/conversations/${cid}/project`, { method: "PUT", headers: J, body: JSON.stringify({ project_id }) }),
 };

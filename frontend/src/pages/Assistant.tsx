@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2, Cloud } from "lucide-react";
-import { api, Conv, extrasApi, Msg, smartApi, Step, streamAgent, streamChat, Tpl } from "../api";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2, Cloud, FolderKanban, Settings2 } from "lucide-react";
+import { api, Conv, extrasApi, Msg, Project, projectsApi, smartApi, Step, streamAgent, streamChat, Tpl } from "../api";
 import Steps from "../components/Steps";
 import { useApp } from "../store";
 import Markdown from "../components/Markdown";
@@ -11,6 +11,16 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
   const { model, models, setModel, health, refresh, prefs } = useApp();
   const [convs, setConvs] = useState<Conv[]>([]);
   const [cid, setCid] = useState<number | null>(null);
+  const [projs, setProjs] = useState<Project[]>([]); const [proj, setProj] = useState<number | null>(null);
+  const [pform, setPform] = useState<{ id: number | null; name: string; instr: string } | null>(null);
+  const loadProjs = () => projectsApi.list().then(setProjs).catch(() => {});
+  useEffect(() => { loadProjs(); }, []);
+  const saveProj = async () => {
+    if (!pform || !pform.name.trim()) return;
+    if (pform.id) await projectsApi.patch(pform.id, { name: pform.name, instructions: pform.instr });
+    else { const r = await projectsApi.create({ name: pform.name, instructions: pform.instr }); setProj(r.id); }
+    setPform(null); loadProjs(); loadList();
+  };
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const tokBuf = useRef(""); const tokTimer = useRef<number | null>(null);
   const flushTok = () => { tokTimer.current = null; const t = tokBuf.current; tokBuf.current = ""; if (!t) return;
@@ -77,12 +87,12 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
         else if (e.type === "stopped") setErr("Stoppet. Ingenting mer ble gjort.");
         else if (e.type === "error") setErr(e.message);
       };
-      if (agentMode && !regenerate) await streamAgent({ message, model, conversation_id: cid }, handler, abort.current.signal);
-      else await streamChat({ message, model, conversation_id: cid, regenerate }, handler, abort.current.signal);
+      if (agentMode && !regenerate) await streamAgent({ message, model, conversation_id: cid, project_id: cid ? undefined : proj }, handler, abort.current.signal);
+      else await streamChat({ message, model, conversation_id: cid, regenerate, project_id: cid ? undefined : proj }, handler, abort.current.signal);
     } catch (e: any) { if (e.name !== "AbortError") setErr(String(e.message || e)); }
     finally {
       if (tokTimer.current) clearTimeout(tokTimer.current); flushTok();
-      setBusy(false); loadList(); refresh();
+      setBusy(false); loadList(); loadProjs(); refresh();
       setMsgs((m) => (m.length && m[m.length - 1].role === "assistant" && !m[m.length - 1].content ? m.slice(0, -1) : m));
       if (id && cid === null && !regenerate) smartApi.autotitle(id, model).then((r) => { if (r.changed) loadList(); }).catch(() => {});
     }
@@ -95,9 +105,34 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
     <div className="flex h-full gap-3">
       <aside className="glass hidden w-64 flex-col rounded-[28px] p-3 xl:flex">
         <button className="btn-primary mb-3 flex items-center justify-center gap-2" onClick={fresh}><Plus size={16} />Ny samtale</button>
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <FolderKanban size={14} className="flex-none text-white/60" />
+            <select aria-label="Prosjekt" value={proj ?? ""} onChange={(e) => setProj(e.target.value ? +e.target.value : null)} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs outline-none">
+              <option value="">Alle samtaler</option>
+              {projs.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.chats})</option>)}
+            </select>
+            <button title="Nytt prosjekt" aria-label="Nytt prosjekt" onClick={() => setPform({ id: null, name: "", instr: "" })} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"><Plus size={14} /></button>
+            {proj && <button title="Rediger prosjekt" aria-label="Rediger prosjekt" onClick={() => { const p = projs.find((x) => x.id === proj); if (p) setPform({ id: p.id, name: p.name, instr: p.instructions }); }} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10"><Settings2 size={14} /></button>}
+          </div>
+          {pform && <div className="animate-pop space-y-1.5 rounded-xl border border-white/10 bg-white/5 p-2">
+            <input autoFocus placeholder="Navn på prosjektet" maxLength={60} value={pform.name} onChange={(e) => setPform({ ...pform, name: e.target.value })} className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs outline-none" />
+            <textarea placeholder="Instrukser KI-en alltid skal følge i dette prosjektet (valgfritt)" maxLength={4000} value={pform.instr} onChange={(e) => setPform({ ...pform, instr: e.target.value })} className="h-24 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs outline-none" />
+            <div className="flex items-center gap-1.5">
+              <button className="btn-primary px-3 py-1 text-xs" disabled={!pform.name.trim()} onClick={saveProj}>Lagre</button>
+              <button className="px-2 py-1 text-xs text-white/70 underline" onClick={() => setPform(null)}>Avbryt</button>
+              {pform.id && <button className="ml-auto px-2 py-1 text-xs text-white/70 underline" onClick={async () => { if (confirm("Slette prosjektet? Samtalene beholdes.")) { await projectsApi.remove(pform.id!); setProj(null); setPform(null); loadProjs(); loadList(); } }}>Slett</button>}
+            </div>
+          </div>}
+          {cid && projs.length > 0 && <label className="flex items-center gap-1.5 text-[11px] text-white/65">Denne samtalen:
+            <select value={convs.find((c) => c.id === cid)?.project_id ?? ""} onChange={async (e) => { await projectsApi.assign(cid, e.target.value ? +e.target.value : null); loadList(); loadProjs(); }} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-1.5 py-1 text-[11px] outline-none">
+              <option value="">Ingen prosjekt</option>
+              {projs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select></label>}
+        </div>
         <div className="flex-1 space-y-0.5 overflow-auto">
           {convs.length === 0 && <div className="px-3 py-6 text-center text-xs text-white/35">Samtaler dukker opp her</div>}
-          {convs.map((c) => (
+          {convs.filter((c) => !proj || c.project_id === proj).map((c) => (
             <div key={c.id} onClick={() => open(c.id)}
               className={`group flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-sm transition ${c.id === cid ? "bg-white/14" : "text-white/70 hover:bg-white/8"}`}>
               <span className="truncate">{c.title}</span>
