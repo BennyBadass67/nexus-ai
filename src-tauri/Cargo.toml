@@ -1,6 +1,6 @@
 [package]
 name = "nexus-ai"
-version = "0.7.1"
+version = "0.7.2"
 description = "NEXUS AI - personlig KI-agent"
 edition = "2021"
 

@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.7.1: Fikser installasjonsfeil (låst nexus-backend.exe): installeren avslutter kjørende NEXUS-prosesser. Ny Oppdateringer-seksjon i Settings som sjekker selv og viser feil, og logg i .nexus-ai\\updater.log. Inneholder Memory og Workspace fra 0.7.0."
+          releaseBody: "0.7.2: Nytt app-ikon (din logo) i oppgavelinjen, installeren og appen. Inneholder installasjonsfiksen og oppdateringssjekken fra 0.7.1."
           releaseDraft: false
           prerelease: false

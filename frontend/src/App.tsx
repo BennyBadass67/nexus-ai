@@ -54,8 +54,7 @@ function Shell() {
     <div className="flex h-full gap-3 p-3">
       <nav className="glass relative flex w-[76px] flex-col items-center gap-1 rounded-[28px] py-4 md:w-60 md:items-stretch md:px-3">
         <div className="mb-4 flex items-center gap-3 px-1 md:px-2">
-          <div className="grid h-10 w-10 flex-none place-items-center rounded-2xl text-[#04101f] shadow-[0_8px_24px_-6px_rgba(var(--accent),.8)]"
-            style={{ background: "linear-gradient(135deg,rgb(var(--accent-hi)),rgb(var(--accent)) 60%,rgb(var(--accent2)))" }}><Sparkles size={20} /></div>
+          <img src="/logo.png" alt="" className="h-10 w-10 flex-none object-contain" />
           <div className="hidden md:block"><div className="text-[15px] font-semibold tracking-wide">{prefs.agent_name}</div>
             <div className="text-[11px] text-white/45">personlig agent</div></div>
         </div>
