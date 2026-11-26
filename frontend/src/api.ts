@@ -169,3 +169,6 @@ export const wsApi = {
   read: (path: string) => j<WsFile>("/api/workspace/read?path=" + encodeURIComponent(path)),
   open: (path: string) => j<{ ok: boolean }>("/api/workspace/open", { method: "POST", headers: J, body: JSON.stringify({ path }) }),
 };
+
+export type UpdateInfo = { current: string; latest: string | null; available: boolean; url: string | null; notes: string; error: string | null };
+export const updateApi = { check: () => j<UpdateInfo>("/api/update") };

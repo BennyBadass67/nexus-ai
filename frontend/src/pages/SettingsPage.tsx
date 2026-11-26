@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, MoonStar, Check } from "lucide-react";
-import { api, ToolInfo } from "../api";
+import { api, ToolInfo, updateApi, UpdateInfo } from "../api";
 import { useApp } from "../store";
 
 const ACCENTS = ["#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
@@ -15,6 +15,9 @@ const PERSONAS = [
 ];
 
 export default function SettingsPage() {
+  const [upd, setUpd] = useState<UpdateInfo | null>(null); const [updBusy, setUpdBusy] = useState(false);
+  const checkUpd = () => { setUpdBusy(true); updateApi.check().then(setUpd).catch((e) => setUpd({ current: "?", latest: null, available: false, url: null, notes: "", error: String(e) })).finally(() => setUpdBusy(false)); };
+  useEffect(() => { checkUpd(); }, []); // eslint-disable-line
   const { health, model, prefs, setPrefs } = useApp();
   const [name, setName] = useState(prefs.agent_name);
   const [user, setUser] = useState(prefs.user_name);
@@ -73,6 +76,18 @@ export default function SettingsPage() {
         <div className="flex flex-wrap gap-1.5">{tl.map((t) => (
           <span key={t.name} title={t.description} className={`rounded-lg px-2 py-1 text-xs ${t.needs_approval ? "bg-amber-400/15 text-amber-200" : "bg-white/8 text-white/70"}`}>{t.name}{t.needs_approval ? " · krever godkjenning" : ""}</span>))}</div>
         <p className="mt-3 text-xs text-white/40">Agenten kan ikke kjøre kommandoer, installere programmer eller endre systeminnstillinger. Sletting går til papirkurven.</p>
+      </Sec>
+
+      <Sec t="Oppdateringer" d="Sjekker GitHub for en nyere versjon.">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-white/60">Installert: <b className="text-white">{upd?.current ?? "…"}</b></span>
+          <span className="text-white/60">Nyeste: <b className="text-white">{upd?.latest ?? "…"}</b></span>
+          <button className="btn-primary" disabled={updBusy} onClick={checkUpd}>{updBusy ? "Sjekker…" : "Sjekk nå"}</button>
+          {upd?.available && upd.url && <a className="btn-primary" href={upd.url} target="_blank" rel="noreferrer">Last ned {upd.latest}</a>}
+        </div>
+        {upd && !upd.error && !upd.available && upd.current !== "dev" && <p className="mt-2 text-xs text-emerald-300">Du har nyeste versjon.</p>}
+        {upd?.available && <p className="mt-2 text-xs text-amber-200">Ny versjon finnes. Lukk NEXUS, kjør den nedlastede filen.</p>}
+        {upd?.error && <p className="mt-2 text-xs text-rose-300">Kunne ikke sjekke: {upd.error}</p>}
       </Sec>
 
       <Sec t="Status">

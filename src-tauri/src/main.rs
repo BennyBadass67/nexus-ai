@@ -15,6 +15,14 @@ fn backend_up() -> bool {
     TcpStream::connect_timeout(&ADDR.parse().unwrap(), Duration::from_millis(300)).is_ok()
 }
 
+fn ulog(msg: &str) {
+    use std::io::Write;
+    let dir = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).unwrap_or_default();
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(format!("{dir}/.nexus-ai/updater.log")) {
+        let _ = writeln!(f, "{} {msg}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0));
+    }
+}
+
 fn kill_backend(app: &AppHandle) {
     if let Some(child) = app.state::<Backend>().0.lock().unwrap().take() {
         let _ = child.kill();
@@ -31,8 +39,12 @@ fn kill_backend(app: &AppHandle) {
 }
 
 async fn check_update(app: AppHandle) {
-    let Ok(updater) = app.updater() else { return };
-    let Ok(Some(update)) = updater.check().await else { return };
+    let Ok(updater) = app.updater() else { ulog("updater: kunne ikke opprettes"); return };
+    let update = match updater.check().await {
+        Ok(Some(u)) => { ulog(&format!("updater: ny versjon {}", u.version)); u }
+        Ok(None) => { ulog("updater: ingen ny versjon"); return }
+        Err(e) => { ulog(&format!("updater: feil ved sjekk: {e}")); return }
+    };
     let msg = format!(
         "NEXUS AI {} er klar. Installere na? Appen starter pa nytt av seg selv.",
         update.version
@@ -49,8 +61,9 @@ async fn check_update(app: AppHandle) {
     .unwrap_or(false);
     if yes {
         kill_backend(&app);
-        if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
-            app.restart();
+        match update.download_and_install(|_, _| {}, || {}).await {
+            Ok(_) => app.restart(),
+            Err(e) => ulog(&format!("updater: installasjon feilet: {e}")),
         }
     }
 }
@@ -63,7 +76,7 @@ fn main() {
         .manage(Backend(Mutex::new(None)))
         .setup(|app| {
             if !backend_up() {
-                let (mut rx, child) = app.shell().sidecar("nexus-backend")?.spawn()?;
+                let (mut rx, child) = app.shell().sidecar("nexus-backend")?.env("NEXUS_VERSION", env!("CARGO_PKG_VERSION")).spawn()?;
                 *app.state::<Backend>().0.lock().unwrap() = Some(child);
                 tauri::async_runtime::spawn(async move { while rx.recv().await.is_some() {} });
             }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command } from "lucide-react";
 import { Provider, useApp } from "./store";
-import { api, Conv } from "./api";
+import { api, Conv, updateApi } from "./api";
 import HomePage from "./pages/HomePage";
 import Assistant from "./pages/Assistant";
 import Models from "./pages/Models";
@@ -29,6 +29,8 @@ function Shell() {
   const [palette, setPalette] = useState(false);
   const [openConv, setOpenConv] = useState<number | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
+  const [newVer, setNewVer] = useState<string | null>(null);
+  useEffect(() => { updateApi.check().then((u) => u.available && setNewVer(u.latest)).catch(() => {}); }, []);
   const { health, model, models, setModel, pulls, prefs } = useApp();
   const online = !!health?.ollama_online;
   const idx = NAV.findIndex((n) => n.id === page);
@@ -70,7 +72,8 @@ function Shell() {
         </div>
         <button onClick={() => setPalette(true)} className="mx-1 mt-4 hidden items-center justify-between rounded-2xl glass-soft px-3 py-2 text-xs text-white/50 transition hover:bg-white/10 md:flex">
           <span className="flex items-center gap-2"><Command size={13} />Søk / kommando</span><span className="kbd">Ctrl K</span></button>
-        <div className="mt-auto hidden rounded-2xl glass-soft p-3 text-xs md:block">
+        {newVer && <button onClick={() => nav("settings")} className="mt-auto hidden rounded-2xl bg-nx-blue/20 px-3 py-2 text-left text-xs text-nx-blue md:block">Ny versjon {newVer} er klar. Trykk for å laste ned.</button>}
+        <div className={`${newVer ? "mt-2" : "mt-auto"} hidden rounded-2xl glass-soft p-3 text-xs md:block`}>
           {pulling.length > 0 ? (<>
             <div className="text-white/70">Laster ned {pulling[0][0]}</div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-nx-blue transition-all"

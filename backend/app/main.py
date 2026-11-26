@@ -1,4 +1,5 @@
 import asyncio
+import os
 import json
 import logging
 import re
@@ -265,6 +266,34 @@ def activity(limit: int = 100):
     with db.conn() as c:
         rows = c.execute("SELECT * FROM activity ORDER BY id DESC LIMIT ?", (min(limit, 500),)).fetchall()
     return [dict(r) for r in rows]
+
+
+APP_VERSION = os.environ.get("NEXUS_VERSION", "dev")
+UPDATE_URL = "https://github.com/BennyBadass67/nexus-ai/releases/latest/download/latest.json"
+
+
+def _vt(v: str):
+    return tuple(int(x) for x in re.findall(r"\d+", v)[:3])
+
+
+@app.get("/api/update")
+async def update_check():
+    """Sjekker latest.json selv, uavhengig av Tauri-oppdateringen, og sier ærlig fra om noe feiler."""
+    out = {"current": APP_VERSION, "latest": None, "available": False, "url": None, "notes": "", "error": None}
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as c:
+            r = await c.get(UPDATE_URL)
+            r.raise_for_status()
+            j = r.json()
+        out["latest"] = j.get("version")
+        out["notes"] = (j.get("notes") or "")[:500]
+        plat = (j.get("platforms") or {}).get("windows-x86_64") or {}
+        out["url"] = plat.get("url")
+        if APP_VERSION != "dev":
+            out["available"] = _vt(out["latest"]) > _vt(APP_VERSION)
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {e}"[:300]
+    return out
 
 
 @app.get("/api/system")
