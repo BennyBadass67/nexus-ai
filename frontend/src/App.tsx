@@ -5,7 +5,8 @@ import { api, Conv } from "./api";
 import HomePage from "./pages/HomePage";
 import Assistant from "./pages/Assistant";
 import Models from "./pages/Models";
-import Planned from "./pages/Planned";
+import MemoryPage from "./pages/MemoryPage";
+import WorkspacePage from "./pages/WorkspacePage";
 import SettingsPage from "./pages/SettingsPage";
 import ActivityPage from "./pages/ActivityPage";
 import AgentsPage from "./pages/AgentsPage";
@@ -84,9 +85,9 @@ function Shell() {
           {page === "home" && <HomePage go={(p) => nav(p as Page)} />}
           {page === "assistant" && <Assistant openId={openConv} onOpened={() => setOpenConv(null)} goModels={() => nav("models")} />}
           {page === "models" && <Models />}
-          {page === "workspace" && <Planned title="Workspace" phase={4} icon={FolderOpen} text="Velg mapper agenten får jobbe i. Alt utenfor er låst." items={["Filutforsker for arbeidsområder", "Agenten leser og skriver kun innenfor godkjente mapper", "Sletting krever alltid din godkjenning"]} />}
+          {page === "workspace" && <WorkspacePage goSettings={() => nav("settings")} />}
           {page === "automations" && <AgentsPage />}
-          {page === "memory" && <Planned title="Memory" phase={5} icon={Brain} text="Det agenten husker om deg og prosjektene dine." items={["Se, rediger og slett minner", "Preferanser og viktige beslutninger", "Alt lagres lokalt i SQLite"]} />}
+          {page === "memory" && <MemoryPage />}
           {page === "activity" && <ActivityPage />}
           {page === "settings" && <SettingsPage />}
         </div>

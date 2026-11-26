@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "Nytt i 0.6.0: Agents-siden. Lag egne agenter (rolle, modell, verktøy) og rom der flere agenter snakker sammen, rund for rund eller med leder. Maks runder, Stopp-knapp, modeller kjøres én og én for lite RAM. Eksempelrom med tre agenter."
+          releaseBody: "Nytt i 0.7.0: Memory-siden (langtidsminne du kan se, endre, feste og slette; agenten kan huske ting med verktøyet remember) og Workspace-siden (bla i mappene agenten har tilgang til og forhåndsvis filer)."
           releaseDraft: false
           prerelease: false

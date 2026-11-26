@@ -123,6 +123,13 @@ def read_file(a: dict) -> str:
     return text[:20000] + ("\n[… avkortet]" if len(text) > 20000 or p.stat().st_size > 60000 else "")
 
 
+def remember(a: dict) -> str:
+    from . import memory
+    kind = str(a.get("kind") or "fact")
+    r = memory.add(str(a.get("text", "")), kind if kind in memory.KINDS else "fact", "agent")
+    return "Husket allerede" if r.get("duplicate") else "Lagret i minnet (brukeren kan se og slette det på Memory-siden)"
+
+
 _SKIP = {"node_modules", ".git", "__pycache__", "AppData", "$RECYCLE.BIN"}
 
 
@@ -325,6 +332,8 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool("open_url", "Åpner en nettadresse i brukerens nettleser.", {"url": (S, "Adresse", True)}, "open", open_url),
     Tool("open_path", "Åpner en fil eller mappe med standardprogrammet.", {"path": (S, "Sti", True)}, "open", open_path),
     Tool("open_app", "Åpner et kjent program: " + ", ".join(sorted(set(APPS))) + ".", {"name": (S, "Programnavn", True)}, "open", open_app),
+    Tool("remember", "Lagrer et kort faktum, en preferanse eller en beslutning om brukeren i langtidsminnet. Bruk bare når brukeren ber om det eller sier noe varig viktig.",
+         {"text": (S, "Det som skal huskes, en kort setning", True), "kind": (S, "fact, preference, decision eller project", False)}, "memory", remember),
     Tool("write_file", "Skriver en tekstfil. Krever brukerens godkjenning.",
          {"path": (S, "Filsti", True), "content": (S, "Innhold", True), "overwrite": ("boolean", "Erstatt hvis den finnes", False)}, "write", write_file),
     Tool("delete_path", "Flytter en fil eller mappe til papirkurven. Krever brukerens godkjenning.", {"path": (S, "Sti", True)}, "delete", delete_path),
@@ -339,7 +348,7 @@ def describe(name: str, args: dict) -> str:
             "open_app": f"Åpne programmet {a.get('name')}", "open_url": f"Åpne {a.get('url')} i nettleseren",
             "open_path": f"Åpne {a.get('path')}", "list_dir": f"Liste mappen {a.get('path')}",
             "read_file": f"Lese filen {a.get('path')}", "search_files": f"Søke etter «{a.get('query')}»",
-            "web_search": f"Søke på nettet etter «{a.get('query')}»", "fetch_url": f"Lese siden {a.get('url')}"}.get(name, name)
+            "remember": f"Huske: {str(a.get('text', ''))[:80]}", "web_search": f"Søke på nettet etter «{a.get('query')}»", "fetch_url": f"Lese siden {a.get('url')}"}.get(name, name)
 
 
 def run_tool(name: str, args) -> str:

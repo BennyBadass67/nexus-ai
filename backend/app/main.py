@@ -11,13 +11,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, library, ollama, rooms, system, tools
+from . import agent, config, db, library, memory, ollama, rooms, system, tools, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
 app = FastAPI(title="NEXUS AI", version="0.1.0")
 db.init()
 app.include_router(rooms.router)
+app.include_router(memory.router)
+app.include_router(workspace.router)
 
 SYSTEM_PROMPT = (
     "Du er NEXUS, en personlig KI-assistent som kjører lokalt på brukerens PC. "
@@ -46,6 +48,9 @@ def build_system_prompt(p: dict) -> str:
             f"Brukeren heter {p['user_name']}. Svar på samme språk som brukeren, kort og presist.")
     if p.get("persona", "").strip():
         base += "\n\nPersonlighet og egne instruksjoner fra brukeren:\n" + p["persona"].strip()
+    mem = memory.context()
+    if mem:
+        base += "\n\n" + mem
     return base
 
 

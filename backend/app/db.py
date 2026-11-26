@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS room_messages (
   content TEXT NOT NULL,
   created_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  content TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'fact',
+  source TEXT NOT NULL DEFAULT 'user',
+  pinned INTEGER NOT NULL DEFAULT 0,
+  created_at REAL NOT NULL,
+  updated_at REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

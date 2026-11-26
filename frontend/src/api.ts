@@ -126,7 +126,7 @@ async function ndjson(url: string, body: object, onEvent: (e: ChatEvent) => void
   }
 }
 
-export const fmtSize = (b: number) => (b > 1e9 ? (b / 1e9).toFixed(1) + " GB" : (b / 1e6).toFixed(0) + " MB");
+export const fmtSize = (b: number) => (b > 1e9 ? (b / 1e9).toFixed(1) + " GB" : b >= 1e6 ? (b / 1e6).toFixed(0) + " MB" : b >= 1e3 ? (b / 1e3).toFixed(0) + " KB" : b + " B");
 
 /** Strømmer nedlastingsfremdrift for en Ollama-modell. */
 export async function streamPull(name: string, onP: (p: Pull) => void, signal: AbortSignal) {
@@ -148,3 +148,24 @@ export async function streamPull(name: string, onP: (p: Pull) => void, signal: A
     }
   }
 }
+
+export type Mem = { id: number; content: string; kind: "fact" | "preference" | "decision" | "project"; source: "user" | "agent"; pinned: boolean; created_at: number; updated_at: number };
+export type MemList = { enabled: boolean; items: Mem[]; limit: number; context_chars: number };
+export const memApi = {
+  list: (q = "") => j<MemList>("/api/memory" + (q ? "?q=" + encodeURIComponent(q) : "")),
+  add: (content: string, kind: Mem["kind"], pinned = false) => j<{ id: number; duplicate?: boolean }>("/api/memory", { method: "POST", headers: J, body: JSON.stringify({ content, kind, pinned }) }),
+  patch: (id: number, p: Partial<Pick<Mem, "content" | "kind" | "pinned">>) => j<{ ok: boolean }>(`/api/memory/${id}`, { method: "PATCH", headers: J, body: JSON.stringify(p) }),
+  del: (id: number) => j<{ ok: boolean }>(`/api/memory/${id}`, { method: "DELETE" }),
+  clear: () => j<{ ok: boolean }>("/api/memory?confirm=true", { method: "DELETE" }),
+  enable: (enabled: boolean) => j<{ enabled: boolean }>("/api/memory/enabled", { method: "PUT", headers: J, body: JSON.stringify({ enabled }) }),
+};
+
+export type WsItem = { name: string; path: string; dir: boolean; size: number; mtime: number };
+export type WsList = { path: string; parent: string | null; items: WsItem[]; truncated: boolean };
+export type WsFile = { path: string; size: number; text: string | null; binary: boolean; truncated?: boolean };
+export const wsApi = {
+  roots: () => j<{ roots: { path: string; exists: boolean }[] }>("/api/workspace/roots"),
+  list: (path: string) => j<WsList>("/api/workspace/list?path=" + encodeURIComponent(path)),
+  read: (path: string) => j<WsFile>("/api/workspace/read?path=" + encodeURIComponent(path)),
+  open: (path: string) => j<{ ok: boolean }>("/api/workspace/open", { method: "POST", headers: J, body: JSON.stringify({ path }) }),
+};
