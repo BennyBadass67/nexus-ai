@@ -217,6 +217,7 @@ export const studyApi = {
   cards: (id: number, due = false) => j<Card[]>(`/api/study/decks/${id}/cards${due ? "?due=true" : ""}`),
   generate: (b: { model: string; text?: string; title?: string; n?: number; deck_id?: number; note_id?: number }) => j<{ deck_id: number; added: number }>("/api/study/generate", { method: "POST", headers: J, body: JSON.stringify(b) }),
   review: (id: number, grade: number) => j<{ interval_days: number }>(`/api/study/cards/${id}/review`, { method: "POST", headers: J, body: JSON.stringify({ grade }) }),
+  quiz: (id: number, n = 10) => j<{ card_id: number; question: string; options: string[]; answer: number }[]>(`/api/study/decks/${id}/quiz?n=${n}`),
   delDeck: (id: number) => j<{ ok: boolean }>("/api/study/decks/" + id, { method: "DELETE" }),
   ask: async (model: string, q: string, onTok: (t: string) => void) => {
     const r = await fetch("/api/knowledge/ask", { method: "POST", headers: J, body: JSON.stringify({ model, q }) });

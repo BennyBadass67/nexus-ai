@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.2.0: Gratis sky-KI (Cloudflare, OpenRouter, Groq, Gemini, egendefinert) som valg under Settings, med lokal modell som standard. Modellduell. Kontrastfiks."
+          releaseBody: "1.3.0: Flervalgsquiz i Studie (feil svar fra andre kort i stokken, oppdaterer repetisjonen)."
           releaseDraft: false
           prerelease: false

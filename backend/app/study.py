@@ -181,6 +181,27 @@ def deck_cards(did: int, due: bool = False):
     return [dict(r) for r in rows]
 
 
+@router.get("/api/study/decks/{did}/quiz")
+def deck_quiz(did: int, n: int = 10):
+    """Flervalgsquiz uten modell: feil svar hentes fra andre kort i samme stokk. Trenger minst 3 kort."""
+    import random
+    with db.conn() as c:
+        if not c.execute("SELECT 1 FROM decks WHERE id=?", (did,)).fetchone():
+            raise HTTPException(404, "Stokken finnes ikke")
+        rows = [dict(r) for r in c.execute("SELECT id, front, back FROM cards WHERE deck_id=?", (did,)).fetchall()]
+    if len(rows) < 3:
+        raise HTTPException(422, "Quiz trenger minst 3 kort i stokken.")
+    random.shuffle(rows)
+    qs = []
+    for r in rows[:max(1, min(n, 30))]:
+        others = list({o["back"] for o in rows if o["back"].strip().lower() != r["back"].strip().lower()})
+        random.shuffle(others)
+        opts = others[:3] + [r["back"]]
+        random.shuffle(opts)
+        qs.append({"card_id": r["id"], "question": r["front"], "options": opts, "answer": opts.index(r["back"])})
+    return qs
+
+
 @router.delete("/api/study/decks/{did}")
 def del_deck(did: int):
     with db.conn() as c:

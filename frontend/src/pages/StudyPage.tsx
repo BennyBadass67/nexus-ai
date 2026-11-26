@@ -11,6 +11,20 @@ function Cards({ model }: { model: string }) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [text, setText] = useState(""); const [title, setTitle] = useState(""); const [n, setN] = useState(8);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [ok, setOk] = useState("");
+  const [quiz, setQuiz] = useState<{ deck: Deck; qs: { card_id: number; question: string; options: string[]; answer: number }[]; i: number; pick: number | null; right: number } | null>(null);
+  const startQuiz = async (d: Deck) => {
+    try { const qs = await studyApi.quiz(d.id); setErr(""); setOk(""); setQuiz({ deck: d, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
+  };
+  const answer = (k: number) => {
+    if (!quiz || quiz.pick !== null) return; const q = quiz.qs[quiz.i]; const good = k === q.answer;
+    studyApi.review(q.card_id, good ? 2 : 0).catch(() => {});
+    setQuiz({ ...quiz, pick: k, right: quiz.right + (good ? 1 : 0) });
+  };
+  const nextQ = () => {
+    if (!quiz) return;
+    if (quiz.i + 1 >= quiz.qs.length) { setOk(`Quiz ferdig: ${quiz.right} av ${quiz.qs.length} riktige.`); setQuiz(null); load(); }
+    else setQuiz({ ...quiz, i: quiz.i + 1, pick: null });
+  };
   const [study, setStudy] = useState<{ deck: Deck; queue: Card[]; i: number; flip: boolean; done: number } | null>(null);
   const load = () => studyApi.decks().then(setDecks).catch((e) => setErr(clean(e)));
   useEffect(() => { load(); }, []);
@@ -33,6 +47,24 @@ function Cards({ model }: { model: string }) {
     else setStudy({ ...study, queue: q, i, flip: false, done: study.done + (g === 0 ? 0 : 1) });
   };
   const field = "rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-nx-blue/60";
+  if (quiz) {
+    const q = quiz.qs[quiz.i];
+    return (
+      <div className="mx-auto mt-6 flex w-full max-w-xl flex-col">
+        <div className="mb-3 flex items-center text-sm text-white/65"><span>Quiz: {quiz.deck.title}</span><span className="ml-auto">{quiz.i + 1} / {quiz.qs.length} · {quiz.right} riktige</span></div>
+        <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-white/10"><div className="sysbar h-full transition-all" style={{ width: `${(quiz.i / quiz.qs.length) * 100}%` }} /></div>
+        <div key={quiz.i} className="glass-soft animate-pop rounded-3xl p-6 text-lg font-medium">{q.question}</div>
+        <div className="mt-3 grid gap-2">
+          {q.options.map((o, k) => {
+            const st = quiz.pick === null ? "" : k === q.answer ? "ring-2 ring-emerald-500" : k === quiz.pick ? "ring-2 ring-rose-500" : "opacity-60";
+            return <button key={k} onClick={() => answer(k)} className={`glass-soft animate-rise rounded-2xl px-4 py-3 text-left text-sm transition hover:bg-white/15 ${st}`} style={{ animationDelay: k * 50 + "ms" }}>{o}{quiz.pick !== null && k === q.answer && <span className="ml-2 text-xs">✓ riktig</span>}{quiz.pick === k && k !== q.answer && <span className="ml-2 text-xs">✗ feil</span>}</button>;
+          })}
+        </div>
+        {quiz.pick !== null && <button className="btn-primary mt-4 self-end" onClick={nextQ}>{quiz.i + 1 >= quiz.qs.length ? "Se resultat" : "Neste"}</button>}
+        <button onClick={() => { setQuiz(null); load(); }} className="mt-4 self-center text-xs text-white/60 underline">Avslutt quiz</button>
+      </div>
+    );
+  }
   if (study) {
     const c = study.queue[study.i];
     return (
@@ -72,6 +104,7 @@ function Cards({ model }: { model: string }) {
             <Layers size={18} className="flex-none text-white/60" />
             <div className="min-w-0 flex-1"><div className="truncate font-medium">{d.title}</div>
               <div className="text-xs text-white/60">{d.total} kort · {d.due} å øve på · {d.learned} lært</div></div>
+            <button className="glass-soft rounded-xl px-3 py-1.5 text-sm disabled:opacity-40" disabled={d.total < 3} title={d.total < 3 ? "Trenger minst 3 kort" : "Flervalgsquiz"} onClick={() => startQuiz(d)}>Quiz</button>
             <button className="btn-primary" disabled={!d.due} onClick={() => start(d)}>Øv ({d.due})</button>
             <button title="Slett stokken" onClick={() => confirm(`Slette «${d.title}» og alle kortene?`) && studyApi.delDeck(d.id).then(load)} className="rounded-lg p-1.5 text-white/50 opacity-0 hover:bg-white/10 group-hover:opacity-100"><Trash2 size={14} /></button>
           </div>))}
