@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "0.8.0: Nytt design (varm glass, lik TikTok-referansen): ny sidemeny, hjem-dashbord, introanimasjon ved oppstart, valgfri aksentfarge og flytende animasjoner. Kun utseende. Bytt tema under Settings."
+          releaseBody: "0.8.1: Ny korall-logo (app, installer, dock-ikon, intro). Oppdateringsknappen starter nå installeren via Windows ShellExecute og viser feil, med logg i .nexus-ai\\updater.log."
           releaseDraft: false
           prerelease: false
