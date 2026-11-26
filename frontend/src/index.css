@@ -269,3 +269,51 @@ input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 4px rgb(var(--acce
 .justify-end.animate-rise { animation: slideR .35s var(--ease) both; }
 .group.animate-rise.gap-3 { animation: slideL .35s var(--ease) both; }
 html.perf *, html.perf *::before { animation-delay: 0ms !important; }
+
+/* ===== Frost: mørk lilla glassmorphism (V7-sidebar + lagdelte glasskort) ===== */
+html.frost { color-scheme: dark; --edge: rgba(190,170,255,.28); }
+html.frost body { color: #f1edff; background: #0b0720; }
+html.frost .aurora { background: radial-gradient(120% 90% at 15% 0%, #2a1466 0%, #120a30 45%, #070415 100%); }
+html.frost .aurora::after { background: radial-gradient(ellipse at center, transparent 45%, rgba(5,2,16,.6)); }
+html.frost .aurora i { display: block !important; filter: blur(70px); mix-blend-mode: screen; }
+html.frost .aurora i:nth-child(1) { background: #7c3aff; opacity: .4; width: 50vw; height: 50vw; left: -8vw; top: -10vw; }
+html.frost .aurora i:nth-child(2) { background: #c026d3; opacity: .26; width: 42vw; height: 42vw; right: -8vw; bottom: -10vw; }
+html.frost .aurora i:nth-child(3) { background: #3b82f6; opacity: .2; width: 30vw; height: 30vw; right: 28vw; top: 10vw; }
+html.frost.perf .aurora i { animation: none; }
+/* paneler: ekte blur, flere gjennomsiktige lag, kantlys og glød */
+html.frost .glass, html.frost.perf .glass {
+  background: linear-gradient(150deg, rgba(255,255,255,.12), rgba(190,170,255,.05) 50%, rgba(255,255,255,.07)), rgba(12,6,34,.5);
+  backdrop-filter: blur(26px) saturate(125%); -webkit-backdrop-filter: blur(26px) saturate(125%);
+  box-shadow: 0 24px 60px -20px rgba(8,0,40,.8), 0 0 0 1px rgba(190,170,255,.10), inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 40px rgba(124,92,255,.07);
+}
+html.frost .glass::before { background: linear-gradient(160deg, rgba(255,255,255,.6), rgba(180,150,255,.12) 38%, rgba(124,92,255,.08) 65%, rgba(200,160,255,.5)); }
+html.frost .glass-soft, html.frost.perf .glass-soft {
+  background: linear-gradient(rgba(255,255,255,.07), rgba(255,255,255,.07)), rgba(12,6,34,.3); border: 1px solid rgba(200,185,255,.18);
+  backdrop-filter: blur(14px) saturate(125%); -webkit-backdrop-filter: blur(14px) saturate(125%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 8px 24px -14px rgba(8,0,40,.7);
+}
+html.frost .glass .glass, html.frost .glass .glass-soft { background: rgba(255,255,255,.06); }
+/* sidebar: svevende glass med lilla glød rundt */
+html.frost nav.glass { box-shadow: 0 0 0 1px rgba(190,170,255,.22), 0 0 46px -6px rgb(var(--accent) / .55), 0 30px 70px -24px rgba(8,0,40,.9), inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 50px rgb(var(--accent) / .12); }
+html.frost .nav-item { color: rgba(236,230,255,.72); position: relative; border-radius: 16px; transition: transform .28s cubic-bezier(.2,.8,.2,1), background-color .28s, box-shadow .28s, color .2s; }
+html.frost .nav-item svg { transition: transform .28s cubic-bezier(.2,.8,.2,1), filter .28s; }
+html.frost .nav-item:hover { color: #fff; background: rgba(255,255,255,.1); transform: translateX(4px); box-shadow: 0 0 22px -6px rgb(var(--accent) / .7); }
+html.frost .nav-item:hover svg { transform: scale(1.18) rotate(-6deg); filter: drop-shadow(0 0 6px rgb(var(--accent-hi) / .9)); }
+html.frost .nav-item.on { color: #fff; background: linear-gradient(100deg, rgb(var(--accent) / .55), rgb(var(--accent) / .16)); box-shadow: 0 0 28px -4px rgb(var(--accent) / .8), inset 0 1px 0 rgba(255,255,255,.4); }
+html.frost .nav-item.on::before { content: ""; position: absolute; left: -9px; top: 22%; bottom: 22%; width: 4px; border-radius: 4px; background: rgb(var(--accent-hi)); box-shadow: 0 0 14px 2px rgb(var(--accent) / .95); animation: frostbar .45s cubic-bezier(.2,.8,.2,1) both; }
+html.frost .nav-item.on svg { filter: drop-shadow(0 0 7px rgb(var(--accent-hi))); }
+@keyframes frostbar { from { transform: scaleY(0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes frostglow { 0%,100% { box-shadow: 0 0 22px -4px rgb(var(--accent) / .65), inset 0 1px 0 rgba(255,255,255,.4); } 50% { box-shadow: 0 0 38px 0 rgb(var(--accent) / .95), inset 0 1px 0 rgba(255,255,255,.4); } }
+@media (prefers-reduced-motion: no-preference) { html.frost:not(.perf) .nav-item.on { animation: frostglow 3.2s ease-in-out infinite; } }
+html.frost button.glass-soft, html.frost .btn, html.frost .hero-btn { transition: transform .25s cubic-bezier(.2,.8,.2,1), background-color .25s, box-shadow .25s; }
+html.frost button.glass-soft:hover { transform: translateY(-2px); background: rgba(255,255,255,.14); box-shadow: 0 0 22px -6px rgb(var(--accent) / .75), inset 0 1px 0 rgba(255,255,255,.3); }
+html.frost button:active { transform: scale(.97); }
+html.frost .btn-primary { color: #fff; background: linear-gradient(180deg, color-mix(in srgb, rgb(var(--accent)) 82%, black), color-mix(in srgb, rgb(var(--accent)) 58%, black)); box-shadow: 0 0 26px -4px rgb(var(--accent) / .85), inset 0 1px 0 rgba(255,255,255,.5); }
+html.frost input, html.frost textarea, html.frost select { background: rgba(255,255,255,.07); border-color: rgba(200,185,255,.25); }
+html.frost .md a, html.frost .cursor::after { color: #cdbbff; } html.frost .cursor::after { background: #cdbbff; }
+@media (prefers-reduced-motion: no-preference) {
+  html.frost .glass:not(nav) { animation: frostin .5s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes frostin { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+}
+html.frost .text-nx-blue { color: #e6dcff !important; }
+html.frost .text-nx-ice { color: #f1ebff !important; }

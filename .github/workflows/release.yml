@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.7.0: Bildevedlegg i chat med lokal synsmodell (f.eks. moondream)."
+          releaseBody: "1.8.0: Studiestatistikk og studieplan, nytt Frost-tema (mørkt lilla glass), Instinct-fane."
           releaseDraft: false
           prerelease: false

@@ -15,7 +15,7 @@ function applyPrefs(p: Prefs) {
   if (!ok) { on = [26, 15, 11]; deep = rgb; }
   h.style.setProperty("--accent-deep", deep.join(" ")); h.style.setProperty("--on-accent", on.join(" "));
   h.style.setProperty("--accent", rgb.join(" ")); h.style.setProperty("--accent-hi", hi.join(" ")); h.style.setProperty("--accent2", sh.join(" "));
-  h.classList.toggle("midnight", p.theme === "midnight"); h.classList.toggle("light", p.theme === "light" || p.theme === "glass"); h.classList.toggle("glass", p.theme === "glass");
+  h.classList.toggle("midnight", p.theme === "midnight"); h.classList.toggle("light", p.theme === "light" || p.theme === "glass"); h.classList.toggle("frost", p.theme === "frost"); h.classList.toggle("glass", p.theme === "glass");
   h.classList.toggle("noaurora", p.aurora === "off" || p.perf === "light"); h.classList.toggle("perf", p.perf === "light");
 }
 type Ctx = {

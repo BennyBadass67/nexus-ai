@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, MoonStar, Check, Sparkles } from "lucide-react";
+import { Moon, Sun, MoonStar, Check, Sparkles, Snowflake } from "lucide-react";
 import { api, ToolInfo } from "../api";
 import { extrasApi } from "../api";
 import CloudSettings from "../components/CloudSettings";
 import UpdateCard from "../components/UpdateCard";
 import { useApp } from "../store";
 
-const ACCENTS = ["#e8553f", "#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
+const ACCENTS = ["#e8553f", "#7c5cff", "#5aa9ff", "#8b7bff", "#c084fc", "#ff6b9d", "#ff8a5b", "#f5c542", "#34d399", "#22d3ee"];
 const THEMES = [
-  { id: "glass", label: "Varm glass", icon: Sparkles }, { id: "dark", label: "Mørk", icon: Moon }, { id: "midnight", label: "Midnatt", icon: MoonStar }, { id: "light", label: "Lys", icon: Sun },
+  { id: "glass", label: "Varm glass", icon: Sparkles }, { id: "frost", label: "Frost", icon: Snowflake }, { id: "dark", label: "Mørk", icon: Moon }, { id: "midnight", label: "Midnatt", icon: MoonStar }, { id: "light", label: "Lys", icon: Sun },
 ] as const;
 const PERSONAS = [
   { label: "Vennlig og kort", text: "Vær varm, vennlig og kortfattet. Gå rett på sak." },
@@ -43,7 +43,7 @@ export default function SettingsPage() {
 
       <Sec t="Utseende" d="Tema og aksentfarge brukes overalt i appen.">
         <div className="flex flex-wrap gap-2">{THEMES.map(({ id, label, icon: I }) => (
-          <button key={id} onClick={() => setPrefs({ theme: id })}
+          <button key={id} onClick={() => setPrefs(id === "frost" && prefs.accent === "#e8553f" ? { theme: id, accent: "#7c5cff" } : { theme: id })}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm transition ${prefs.theme === id ? "bg-nx-blue/25 ring-1 ring-nx-blue/70" : "glass-soft hover:bg-white/10"}`}><I size={15} />{label}</button>))}</div>
         <div className="mt-4 text-xs text-white/50">Aksentfarge</div>
         <div className="mt-2 flex flex-wrap items-center gap-2.5">

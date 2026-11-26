@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { GraduationCap, PenLine, Sparkles, Trash2, Loader2, Copy, Check, RotateCcw, Layers, Swords } from "lucide-react";
-import { Card, Deck, studyApi } from "../api";
+import { GraduationCap, PenLine, Sparkles, Trash2, Loader2, Copy, Check, RotateCcw, Layers, Swords, CalendarDays, Flame } from "lucide-react";
+import { Card, Deck, studyApi, schoolApi, StudyStats } from "../api";
 import { useApp } from "../store";
 
 const ACTIONS: [string, string][] = [["summarize", "Oppsummer"], ["bullets", "Punkter"], ["fix", "Rett feil"], ["simplify", "Forenkle"], ["formal", "Formell tone"], ["to_en", "Til engelsk"], ["to_no", "Til norsk"], ["explain", "Forklar"], ["questions", "Lag spørsmål"]];
@@ -113,6 +113,50 @@ function Cards({ model }: { model: string }) {
   );
 }
 
+function StatsStrip() {
+  const [s, setS] = useState<StudyStats | null>(null);
+  useEffect(() => { schoolApi.stats().then(setS).catch(() => {}); }, []);
+  if (!s) return null;
+  const mx = Math.max(1, ...s.last7.map((x) => x.n));
+  return (
+    <div className="glass-soft mb-3 flex animate-rise flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl px-4 py-3 text-sm">
+      <div className="flex items-center gap-2"><Flame size={16} /><b className="text-lg tabular-nums">{s.streak}</b><span className="text-white/70">{s.streak === 1 ? "dag på rad" : "dager på rad"}</span></div>
+      <div><b className="tabular-nums">{s.today}</b> <span className="text-white/70">repetisjoner i dag</span></div>
+      {s.good_pct_7d != null && <div><b className="tabular-nums">{s.good_pct_7d} %</b> <span className="text-white/70">riktig siste 7 dager</span></div>}
+      <div className="ml-auto flex h-8 items-end gap-1" title="Repetisjoner siste 7 dager">{s.last7.map((x) => <div key={x.day} title={`${x.day}: ${x.n}`} className="sysbar w-2.5 rounded-sm transition-all duration-700" style={{ height: Math.max(3, (x.n / mx) * 30) + "px", opacity: x.n ? 1 : 0.25 }} />)}</div>
+    </div>);
+}
+
+function Plan() {
+  const [topics, setTopics] = useState(""); const [exam, setExam] = useState(""); const [subj, setSubj] = useState("");
+  const [items, setItems] = useState<{ due: string; text: string }[] | null>(null); const [err, setErr] = useState(""); const [ok, setOk] = useState("");
+  const list = () => topics.split("\n").map((t) => t.trim()).filter(Boolean);
+  const go = async (commit: boolean) => {
+    setErr(""); setOk("");
+    try { const r = await schoolApi.plan({ topics: list(), exam_date: exam, subject: subj, commit }); setItems(r.items); if (commit) setOk(`${r.added} oppgaver lagt til under Notater og på I dag-kortet.`); }
+    catch (e) { setErr(clean(e)); setItems(null); }
+  };
+  const field = "rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-nx-blue/60";
+  return (
+    <div className="mt-4 grid min-h-0 flex-1 gap-4 overflow-auto md:grid-cols-2">
+      <div className="glass-soft rounded-3xl p-4">
+        <div className="flex items-center gap-2 text-sm font-medium"><CalendarDays size={15} />Lag studieplan</div>
+        <p className="mt-1 text-xs text-white/60">Skriv ett emne per linje og når prøven er. Planen fordeler emnene over dagene, legger inn repetisjon etter to dager og en samlet repetisjon dagen før.</p>
+        <input className={`${field} mt-3 w-full`} placeholder="Fag (valgfritt), f.eks. Matte" maxLength={60} value={subj} onChange={(e) => setSubj(e.target.value)} />
+        <textarea className={`${field} mt-2 h-32 w-full resize-none`} placeholder={"Brøk\nLikninger\nGeometri"} value={topics} onChange={(e) => setTopics(e.target.value)} />
+        <label className="mt-2 flex items-center gap-3 text-sm text-white/70">Prøvedato<input type="date" className={field} value={exam} onChange={(e) => setExam(e.target.value)} /></label>
+        <div className="mt-3 flex gap-2"><button className="btn" disabled={!list().length || !exam} onClick={() => go(false)}>Forhåndsvis</button>
+          <button className="btn-primary" disabled={!list().length || !exam} onClick={() => go(true)}>Legg i oppgaver</button></div>
+        {err && <div className="mt-2 text-sm text-rose-300">{err}</div>}
+        {ok && <div className="mt-2 text-sm text-emerald-300">{ok}</div>}
+      </div>
+      <div className="space-y-1.5">
+        {!items && <div className="glass-soft rounded-3xl p-8 text-center text-sm text-white/60">Planen vises her.</div>}
+        {items?.map((it, i) => <div key={i} className="glass-soft flex animate-rise items-center gap-3 rounded-xl px-3 py-2 text-sm" style={{ animationDelay: Math.min(i, 12) * 30 + "ms" }}><span className="w-20 flex-none text-xs tabular-nums text-white/65">{it.due}</span><span>{it.text}</span></div>)}
+      </div>
+    </div>);
+}
+
 function Write({ model }: { model: string }) {
   const [src, setSrc] = useState(""); const [out, setOut] = useState(""); const [act, setAct] = useState("");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [copied, setCopied] = useState(false);
@@ -188,17 +232,17 @@ function Duel() {
 
 export default function StudyPage() {
   const { model } = useApp();
-  const [tab, setTab] = useState<"cards" | "write" | "duel">("cards");
+  const [tab, setTab] = useState<"cards" | "plan" | "write" | "duel">("cards");
   return (
     <div className="glass flex h-full flex-col overflow-hidden rounded-[28px] p-6">
       <div className="flex items-center gap-3">
         <div><h1 className="text-xl font-semibold">Studie</h1><p className="text-sm text-white/55">Lag øvingskort av pensum og jobb med tekster. Alt kjører lokalt{model ? ` med ${model}` : ""}.</p></div>
         <div className="ml-auto flex gap-1 rounded-2xl glass-soft p-1 text-sm">
-          {([["cards", "Kort", GraduationCap], ["write", "Skriveverktøy", PenLine], ["duel", "Modellduell", Swords]] as const).map(([id, l, I]) => (
+          {([["cards", "Kort", GraduationCap], ["plan", "Studieplan", CalendarDays], ["write", "Skriveverktøy", PenLine], ["duel", "Modellduell", Swords]] as const).map(([id, l, I]) => (
             <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition ${tab === id ? "bg-white/15 font-medium" : "text-white/60"}`}><I size={14} />{l}</button>))}
         </div>
       </div>
-      {tab === "cards" ? <Cards model={model} /> : tab === "write" ? <Write model={model} /> : <Duel />}
+      {tab === "cards" ? <><StatsStrip /><Cards model={model} /></> : tab === "plan" ? <Plan /> : tab === "write" ? <Write model={model} /> : <Duel />}
     </div>
   );
 }

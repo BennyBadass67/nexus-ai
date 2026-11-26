@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import vision, projects, agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
+from . import school, vision, projects, agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
@@ -20,6 +20,7 @@ app = FastAPI(title="NEXUS AI", version="0.1.0")
 db.init()
 app.include_router(rooms.router)
 app.include_router(projects.router)
+app.include_router(school.router)
 app.include_router(teambuilder.router)
 app.include_router(update.router)
 app.include_router(memory.router)
@@ -37,7 +38,7 @@ HISTORY_LIMIT = 30
 PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
                  "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off"}
 PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
-PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass", "frost"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}}
 
 
 def get_prefs() -> dict:

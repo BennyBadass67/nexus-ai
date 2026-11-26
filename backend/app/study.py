@@ -259,6 +259,8 @@ def review(cid: int, b: ReviewIn):
         ease, iv, reps, lap = schedule(k["ease"], k["interval"], k["reps"], k["lapses"], b.grade)
         due = time.time() + (600 if b.grade == 0 else iv * DAY)
         c.execute("UPDATE cards SET ease=?,interval=?,reps=?,lapses=?,due=? WHERE id=?", (ease, iv, reps, lap, due, cid))
+    from . import school
+    school.log_review(b.grade)
     return {"interval_days": iv, "due": due, "ease": ease}
 
 

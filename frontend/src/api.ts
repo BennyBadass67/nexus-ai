@@ -23,7 +23,7 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
-export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off" };
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass" | "frost"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off" };
 
 export type AgentDef = { id: number; name: string; role: string; prompt: string; model: string | null; tools: string[] };
 export type Room = { id: number; title: string; agent_ids: number[]; max_rounds: number; mode: "roundrobin" | "leader" };
@@ -267,3 +267,11 @@ export const projectsApi = {
 export type Today = { date: string; tasks_open: number; tasks_overdue: Note[]; tasks_today: Note[]; tasks_next: Note[]; cards_due: number; cards_total: number;
   quota: { id: string; label: string; remaining: number; limit: number; unit: string; pct: number }[]; last_chat: { id: number; title: string; updated_at: number; project: string | null } | null };
 export const todayApi = { get: () => { const d = new Date(); const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; return j<Today>("/api/today?date=" + ds); } };
+
+export type StudyStats = { today: number; streak: number; last7: { day: string; n: number }[]; total: number; good_pct_7d: number | null };
+const localDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+export const schoolApi = {
+  stats: () => j<StudyStats>("/api/study/stats?date=" + localDay()),
+  plan: (b: { topics: string[]; exam_date: string; subject?: string; commit?: boolean }) =>
+    j<{ items: { due: string; text: string }[]; added: number }>("/api/study/plan", { method: "POST", headers: J, body: JSON.stringify({ ...b, start_date: localDay() }) }),
+};
