@@ -12,7 +12,7 @@ async function typeTest(label, sel, idx=0){
   const v=await p.evaluate((sel,idx)=>document.querySelectorAll(sel)[idx].value,sel,idx);
   console.log(label,"lost focus:",lost,"value ok:",v===s);
 }
-await go("Settings"); await w(800);
+await w(4300); await go("Settings"); await w(800);
 await typeTest("agent-navn","input.w-full",0);
 await typeTest("bruker-navn","input.w-full",1);
 await typeTest("persona","textarea",0);
@@ -20,7 +20,7 @@ const y0=await p.evaluate(()=>document.querySelector(".overflow-auto").scrollTop
 await p.screenshot({path:"/downloads/nexus/ui-settings-typing.png"});
 await go("Memory"); await w(600); await typeTest("memory","input[maxlength='500']",0);
 await go("Assistant"); await w(600); await typeTest("assistant","textarea",0);
-await go("Agents"); await w(600);
+await go("Agenter"); await w(600);
 await p.evaluate(()=>[...document.querySelectorAll("button")].find(b=>b.textContent.includes("Lag eksempel")).click()); await w(1000);
 await typeTest("rom-chat","textarea",0);
 console.log("errors",errs); await b.close();
