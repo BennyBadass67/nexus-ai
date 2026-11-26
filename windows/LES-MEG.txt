@@ -1,0 +1,11 @@
+NEXUS AI (fase 1)
+
+1. Pakk ut hele mappen (ikke kjor fra innsiden av zip-filen).
+2. Installer Ollama fra ollama.com hvis du ikke har den.
+3. Last ned en liten modell, apne PowerShell og kjor:   ollama pull qwen2.5:3b
+   (passer for 8 GB RAM / GTX 1650. qwen2.5:1.5b er enda lettere.)
+4. Dobbeltklikk NEXUS-AI.bat. Appen apner i eget vindu.
+
+Samtaler lagres lokalt i %USERPROFILE%\.nexus-ai\nexus.db. Ingenting sendes til skyen.
+Avslutt: Oppgavebehandling > avslutt "pythonw.exe". (Stopp-knapp kommer i fase 3.)
+Feillogg: %USERPROFILE%\.nexus-ai\nexus.log

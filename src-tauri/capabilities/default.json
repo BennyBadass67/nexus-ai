@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Hovedvindu (kun lokal splash-side far IPC)",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

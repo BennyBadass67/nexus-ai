@@ -1,0 +1,47 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: "src-tauri -> target" }
+      - name: Bygg frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Bygg backend (PyInstaller sidecar)
+        shell: bash
+        run: |
+          pip install -r backend/requirements.txt pyinstaller
+          cd backend
+          pyinstaller --onefile --noconsole --name nexus-backend \
+            --collect-submodules uvicorn --collect-submodules app \
+            --add-data "../frontend/dist;frontend/dist" run.py
+          mkdir -p ../src-tauri/binaries
+          cp dist/nexus-backend.exe ../src-tauri/binaries/nexus-backend-x86_64-pc-windows-msvc.exe
+      - name: Installer Tauri CLI
+        run: npm install --no-audit --no-fund
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "NEXUS AI ${{ github.ref_name }}"
+          releaseBody: "Last ned NEXUS-AI_*_x64-setup.exe og kjor den. Eksisterende installasjoner oppdateres automatisk."
+          releaseDraft: false
+          prerelease: false

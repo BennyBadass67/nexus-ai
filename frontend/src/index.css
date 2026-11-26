@@ -1,0 +1,52 @@
+@import "@fontsource-variable/inter";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; --edge: rgba(255,255,255,.16); }
+html, body, #root { height: 100%; overflow: hidden; }
+body {
+  margin: 0; color: #eaf1ff; background: #050810; font-family: theme("fontFamily.sans");
+  font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; letter-spacing: -0.005em;
+}
+::selection { background: rgba(90,169,255,.35); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); background-clip: padding-box; border: 3px solid transparent; }
+
+.aurora { position: fixed; inset: 0; overflow: hidden; z-index: -1; background: #050810; }
+.aurora i { position: absolute; border-radius: 9999px; filter: blur(90px); opacity: .55; will-change: transform; }
+.aurora i:nth-child(1) { width: 55vw; height: 55vw; left: -10vw; top: -15vw; background: #2f6bff; animation: drift1 24s ease-in-out infinite; }
+.aurora i:nth-child(2) { width: 45vw; height: 45vw; right: -8vw; bottom: -12vw; background: #7a4dff; opacity: .45; animation: drift2 30s ease-in-out infinite; }
+.aurora i:nth-child(3) { width: 30vw; height: 30vw; right: 22vw; top: -8vw; background: #ff9a6b; opacity: .18; animation: drift3 36s ease-in-out infinite; }
+.aurora::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(3,5,12,.65)); }
+
+@layer components {
+  .glass {
+    position: relative;
+    background: linear-gradient(145deg, rgba(255,255,255,.11), rgba(255,255,255,.035) 55%, rgba(255,255,255,.06));
+    box-shadow: 0 20px 50px -12px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.03);
+    backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%);
+  }
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(160deg, rgba(255,255,255,.45), rgba(255,255,255,.06) 35%, rgba(255,255,255,.03) 65%, rgba(140,180,255,.3));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  .glass-soft { background: rgba(255,255,255,.055); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08); }
+  .btn { @apply rounded-xl px-3.5 py-2 text-sm font-medium transition duration-200 active:scale-[.96] disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn text-[#04101f] disabled:opacity-40 hover:brightness-110;
+    background: linear-gradient(180deg, #b6dcff, #5aa9ff); box-shadow: 0 6px 20px -4px rgba(90,169,255,.55), inset 0 1px 0 rgba(255,255,255,.6); }
+  .btn-ghost { @apply btn glass-soft hover:bg-white/10; }
+  .kbd { @apply rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/60; }
+  .skeleton { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.04) 75%); background-size: 200% 100%; @apply animate-shimmer rounded-xl; }
+}
+
+.md p { margin: 0 0 .65em; } .md p:last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3 { font-weight: 600; margin: .9em 0 .4em; letter-spacing: -0.02em; }
+.md h1 { font-size: 1.25em; } .md h2 { font-size: 1.12em; } .md h3 { font-size: 1.02em; }
+.md ul, .md ol { margin: 0 0 .65em 1.2em; padding: 0; } .md ul { list-style: disc; } .md ol { list-style: decimal; }
+.md li { margin: .15em 0; } .md li::marker { color: rgba(140,190,255,.8); }
+.md code { font-family: "Cascadia Code", "JetBrains Mono", ui-monospace, monospace; font-size: .86em; background: rgba(255,255,255,.1); padding: .12em .4em; border-radius: 6px; }
+.md a { color: #8fc4ff; text-decoration: underline; text-underline-offset: 3px; }
+.cursor::after { content: ""; display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: text-bottom; border-radius: 2px; background: #8fc4ff; animation: blink 1s infinite; }
