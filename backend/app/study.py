@@ -384,3 +384,21 @@ async def suggest(cid: int, b: ModelIn):
         if isinstance(x, str) and 3 <= len(x.strip()) <= 140 and x.strip() not in out:
             out.append(x.strip())
     return {"suggestions": out[:3]}
+
+
+# ---------- Modellduell: samme spørsmål til en valgt modell, strømmet som ren tekst ----------
+class CompleteIn(BaseModel):
+    model: str = Field(min_length=1)
+    prompt: str = Field(min_length=1, max_length=4000)
+
+
+@router.post("/api/complete")
+async def complete(b: CompleteIn):
+    async def gen():
+        try:
+            async for kind, val in ollama.chat_stream(b.model, [{"role": "user", "content": b.prompt}]):
+                if kind == "token":
+                    yield val
+        except Exception as e:
+            yield "\n\n[Feil: " + str(e) + "]"
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")

@@ -203,7 +203,7 @@ export default function Models() {
     <div className="glass h-full overflow-auto rounded-[28px] p-7">
       <div className="mb-4 flex items-center justify-between">
         <div><h1 className="text-xl font-semibold">Models</h1>
-          <p className="text-sm text-white/50">Gratis lokale modeller. Kjører på din PC, ingenting sendes ut. Cloud-modeller kommer senere i fase 2.</p></div>
+          <p className="text-sm text-white/50">Gratis lokale modeller. Kjører på din PC, ingenting sendes ut. Vil du heller bruke gratis skymodeller, slår du dem på under Settings, Sky-KI.</p></div>
         <div className="flex gap-1 rounded-xl glass-soft p-1 text-sm">
           {(["rec", "installed", "browse"] as const).map((t) => (
             <button key={t} onClick={() => { setTab(t); if (t === "installed") refresh(); }}

@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import agent, config, db, extras, study, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
+from . import agent, config, db, extras, study, cloud, library, memory, ollama, rooms, system, teambuilder, tools, update, workspace
 from .schemas import BenchRequest, ChatRequest, PullRequest, RenameRequest
 
 log = logging.getLogger("nexus")
@@ -25,6 +25,7 @@ app.include_router(memory.router)
 app.include_router(workspace.router)
 app.include_router(extras.router)
 app.include_router(study.router)
+app.include_router(cloud.router)
 
 SYSTEM_PROMPT = (
     "Du er NEXUS, en personlig KI-assistent som kjører lokalt på brukerens PC. "
@@ -70,14 +71,15 @@ async def health():
 
 @app.get("/api/models")
 async def models():
+    sky = cloud.enabled_models()
     try:
         items = await ollama.tags()
     except Exception as e:
-        return {"online": False, "error": str(e), "models": []}
+        return {"online": False, "error": str(e), "models": sky}
     return {"online": True, "models": [
         {"name": m["name"], "size": m.get("size", 0),
          "params": m.get("details", {}).get("parameter_size"),
-         "quant": m.get("details", {}).get("quantization_level")} for m in items]}
+         "quant": m.get("details", {}).get("quantization_level")} for m in items] + sky}
 
 
 @app.get("/api/conversations")
@@ -144,7 +146,7 @@ async def chat(req: ChatRequest):
                [dict(r) for r in reversed(hist)]
 
     async def gen():
-        yield _ev(type="meta", conversation_id=cid, model=req.model, provider="ollama")
+        yield _ev(type="meta", conversation_id=cid, model=req.model, provider=("cloud" if cloud.is_cloud(req.model) else "ollama"))
         parts: list[str] = []
         try:
             async for kind, val in ollama.chat_stream(req.model, messages):
@@ -202,7 +204,7 @@ async def agent_run(req: AgentRunReq):
     msgs = [dict(r) for r in reversed(hist)]
 
     async def gen():
-        yield _ev(type="meta", conversation_id=cid, model=req.model, run_id=run.id, provider="ollama")
+        yield _ev(type="meta", conversation_id=cid, model=req.model, run_id=run.id, provider=("cloud" if cloud.is_cloud(req.model) else "ollama"))
         final = ""
         try:
             async for e in agent.run_agent(run, req.model, msgs, build_system_prompt(get_prefs()), req.text_mode):

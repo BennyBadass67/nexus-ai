@@ -180,3 +180,11 @@ def test_suggest(monkeypatch):
     assert client.post(f"/api/conversations/{cid}/suggest", json={"model": "m"}).json()["suggestions"] == []
     empty = _conv("e", [])
     assert client.post(f"/api/conversations/{empty}/suggest", json={"model": "m"}).status_code == 422
+
+
+def test_complete_stream_and_errors():
+    r = client.post("/api/complete", json={"model": "mock:1b", "prompt": "Hei"})
+    assert r.status_code == 200 and "Hei" in r.text
+    assert "Feil" in client.post("/api/complete", json={"model": "nope", "prompt": "Hei"}).text
+    assert client.post("/api/complete", json={"model": "mock:1b", "prompt": ""}).status_code == 422
+    assert client.post("/api/complete", json={"model": "mock:1b", "prompt": "x" * 4001}).status_code == 422

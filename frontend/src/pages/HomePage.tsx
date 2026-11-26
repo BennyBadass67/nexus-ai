@@ -54,7 +54,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
             <div className="max-w-md">
               <span className="inline-flex items-center gap-2 rounded-full bg-black/25 px-3 py-1 text-xs"><span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-white" : "bg-black/40"}`} />{online ? "Ollama kjører" : "Ollama er offline"}</span>
               <h2 className="mt-4 text-[34px] font-semibold leading-[1.08] tracking-tight">Din lokale AI er <span className="serif-i text-[40px]">{done === 3 ? "klar" : "på vei"}</span> til å jobbe</h2>
-              <p className="mt-3 text-sm opacity-85">{done === 3 ? `Alt kjører på PC-en din med ${model}. Ingen data forlater maskinen.` : "Fullfør oppsettet: Ollama på, minst én modell, og velg en modell."}</p>
+              <p className="mt-3 text-sm opacity-85">{done === 3 ? `${model.startsWith("cloud:") ? `Du bruker skymodellen ${model.replace(/^cloud:[^:]+:/, "")}: meldingene sendes til leverandøren.` : `Alt kjører på PC-en din med ${model}. Ingen data forlater maskinen.`}` : "Fullfør oppsettet: Ollama på, minst én modell, og velg en modell."}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <button className="hero-btn rounded-full bg-white px-5 py-2 text-sm font-medium transition hover:scale-[1.03]" onClick={() => go("assistant")}>Åpne Assistant <ArrowUpRight size={14} className="inline" /></button>
                 <button className="rounded-full border border-white/50 px-5 py-2 text-sm transition hover:bg-black/15" onClick={() => go("models")}>+ Modeller</button></div>

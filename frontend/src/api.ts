@@ -1,5 +1,5 @@
 export type Health = { backend: string; ollama_online: boolean; ollama_version: string | null; conversations: number };
-export type ModelInfo = { name: string; size: number; params?: string; quant?: string };
+export type ModelInfo = { name: string; size: number; params?: string; quant?: string; cloud?: boolean; provider?: string };
 export type ModelsResp = { online: boolean; error?: string; models: ModelInfo[] };
 export type Conv = { id: number; title: string; model: string | null; updated_at: number };
 export type Step = { call_id: string; tool: string; describe: string; risk: string; status: "running" | "waiting" | "ok" | "error" | "denied"; result?: string };
@@ -226,6 +226,12 @@ export const studyApi = {
     for (;;) { const { done, value } = await rd.read(); if (done) break; onTok(dec.decode(value, { stream: true })); }
     return srcs;
   },
+  complete: async (model: string, prompt: string, onTok: (t: string) => void, signal?: AbortSignal) => {
+    const r = await fetch("/api/complete", { method: "POST", headers: J, body: JSON.stringify({ model, prompt }), signal });
+    if (!r.ok || !r.body) throw new Error(await r.text());
+    const rd = r.body.getReader(); const dec = new TextDecoder();
+    for (;;) { const { done, value } = await rd.read(); if (done) break; onTok(dec.decode(value, { stream: true })); }
+  },
   transform: async (model: string, action: string, text: string, onTok: (t: string) => void, signal?: AbortSignal) => {
     const r = await fetch("/api/write/transform", { method: "POST", headers: J, body: JSON.stringify({ model, action, text }), signal });
     if (!r.ok || !r.body) throw new Error(await r.text());
@@ -237,4 +243,12 @@ export const studyApi = {
 export const smartApi = {
   autotitle: (cid: number, model: string) => j<{ title: string; changed: boolean }>(`/api/conversations/${cid}/autotitle`, { method: "POST", headers: J, body: JSON.stringify({ model }) }),
   suggest: (cid: number, model: string) => j<{ suggestions: string[] }>(`/api/conversations/${cid}/suggest`, { method: "POST", headers: J, body: JSON.stringify({ model }) }),
+};
+
+export type CloudProv = { id: string; label: string; free: string; key_help: string; key_url: string; needs_account: boolean; custom: boolean; has_key: boolean; key_hint: string; account_id: string; base_url: string; custom_model: string; enabled: boolean; models: string[]; requests_today: number };
+export const cloudApi = {
+  list: () => j<CloudProv[]>("/api/cloud/providers"),
+  save: (id: string, b: Record<string, unknown>) => j<CloudProv>("/api/cloud/providers/" + id, { method: "PUT", headers: J, body: JSON.stringify(b) }),
+  forget: (id: string) => j<CloudProv>("/api/cloud/providers/" + id, { method: "DELETE" }),
+  test: (id: string) => j<{ ok: boolean; error?: string; model?: string; reply?: string; models?: string[] }>("/api/cloud/providers/" + id + "/test", { method: "POST" }),
 };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2 } from "lucide-react";
+import { Plus, ArrowUp, Square, Trash2, Copy, Check, RotateCw, ChevronDown, Sparkles, Pencil, Wrench, Download, Paperclip, FileText, Lightbulb, Loader2, Cloud } from "lucide-react";
 import { api, Conv, extrasApi, Msg, smartApi, Step, streamAgent, streamChat, Tpl } from "../api";
 import Steps from "../components/Steps";
 import { useApp } from "../store";
@@ -170,15 +170,16 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
               className={`grid h-10 w-10 place-items-center rounded-xl transition ${agentMode ? "bg-nx-blue/25 text-nx-ice ring-1 ring-nx-blue/60" : "text-white/45 hover:bg-white/10"}`}><Wrench size={16} /></button>
             <div className="relative">
               <button onClick={() => setPick((v) => !v)} className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs text-white/60 transition hover:bg-white/10">
-                <span className="max-w-[120px] truncate">{model || "ingen modell"}</span><ChevronDown size={13} /></button>
+                <span className="max-w-[120px] truncate">{model.startsWith("cloud:") && <Cloud size={12} className="mr-1 inline" />}{(model || "ingen modell").replace(/^cloud:[^:]+:/, "")}</span><ChevronDown size={13} /></button>
               {pick && (<>
                 <div className="fixed inset-0 z-20" onClick={() => setPick(false)} />
                 <div className="glass absolute bottom-12 right-0 z-30 w-60 animate-pop rounded-2xl p-1.5">
                   {!models?.models.length && <div className="p-3 text-xs text-white/50">Ingen modeller installert</div>}
-                  {models?.models.map((m) => (
-                    <button key={m.name} onClick={() => { setModel(m.name); setPick(false); }}
+                  {models?.models.map((m, i) => (<div key={m.name}>
+                    {m.cloud && !models.models[i - 1]?.cloud && <div className="px-3 pb-1 pt-2 text-[11px] uppercase tracking-wider text-white/55">Sky (sendes ut av PC-en)</div>}
+                    <button onClick={() => { setModel(m.name); setPick(false); }}
                       className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm hover:bg-white/10">
-                      <span className="truncate">{m.name}</span>{m.name === model && <Check size={14} className="text-nx-blue" />}</button>))}
+                      <span className="flex min-w-0 items-center gap-1.5 truncate">{m.cloud && <Cloud size={12} className="flex-none" />}<span className="truncate">{m.cloud ? m.name.replace(/^cloud:[^:]+:/, "") : m.name}</span></span>{m.name === model && <Check size={14} className="text-nx-blue" />}</button></div>))}
                   <div className="my-1 border-t border-white/10" />
                   <button onClick={() => { setPick(false); goModels(); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/60 hover:bg-white/10"><Pencil size={13} />Administrer modeller</button>
                 </div></>)}
@@ -187,7 +188,7 @@ export default function Assistant({ openId, onOpened, goModels }: { openId: numb
               ? <button className="btn-primary grid h-10 w-10 place-items-center !p-0" title="Stopp" onClick={() => { if (runId.current) api.stopRun(runId.current).catch(() => {}); else abort.current?.abort(); }}><Square size={14} fill="currentColor" /></button>
               : <button className="btn-primary grid h-10 w-10 place-items-center !p-0" title="Send" disabled={!text.trim()} onClick={send}><ArrowUp size={18} strokeWidth={2.5} /></button>}
           </div>
-          <div className="mt-2 text-center text-[11px] text-white/30">{agentMode ? "Agent-modus: kan lese filer og søke på nettet (søkeord sendes til DuckDuckGo). Skriving og sletting krever din godkjenning." : "Lokal modell · samtalen forlater aldri PC-en"}</div>
+          <div className="mt-2 text-center text-[11px] text-white/30">{agentMode ? "Agent-modus: kan lese filer og søke på nettet (søkeord sendes til DuckDuckGo). Skriving og sletting krever din godkjenning." : model.startsWith("cloud:") ? "☁ Skymodell: meldingene sendes til leverandøren (gratisnivå). Bytt til en lokal modell for private ting." : "Lokal modell · samtalen forlater aldri PC-en"}</div>
         </div>
       </section>
     </div>

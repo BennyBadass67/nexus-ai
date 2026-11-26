@@ -56,6 +56,11 @@ async def version() -> str | None:
 
 async def chat_stream(model: str, messages: list[dict]) -> AsyncIterator[tuple[str, object]]:
     """Gir ("token", tekst) underveis og til slutt ("stats", {tokens, seconds})."""
+    if model.startswith("cloud:"):
+        from . import cloud
+        async for x in cloud.stream(model, messages):
+            yield x
+        return
     # Begrenset kontekst gir mindre minnebruk (viktig på 4 GB GPU / 8 GB RAM). keep_alive holder modellen varm.
     payload = {"model": model, "messages": fit_messages(messages), "stream": True, "keep_alive": "10m",
                "options": {"num_ctx": CTX}}
@@ -137,6 +142,11 @@ class ToolsUnsupported(RuntimeError):
 
 async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] | None) -> AsyncIterator[tuple[str, object]]:
     """Som chat_stream, men støtter Ollamas verktøykall. Gir ("token", tekst), ("tool_calls", liste), ("stats", ..)."""
+    if model.startswith("cloud:"):
+        from . import cloud
+        async for x in cloud.stream(model, messages, tools):
+            yield x
+        return
     payload: dict = {"model": model, "messages": fit_messages(messages), "stream": True, "keep_alive": "10m",
                      "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
     if tools:
@@ -178,6 +188,9 @@ async def chat_tools_stream(model: str, messages: list[dict], tools: list[dict] 
 
 async def chat_json(model: str, messages: list[dict]) -> str:
     """Ett svar som må være gyldig JSON (Ollama sitt format-json). Brukes til å la modellen foreslå strukturerte ting."""
+    if model.startswith("cloud:"):
+        from . import cloud
+        return await cloud.chat_json(model, messages)
     payload = {"model": model, "messages": fit_messages(messages), "stream": False, "format": "json", "keep_alive": "10m",
                "options": {"num_ctx": 4096, "temperature": 0.3, "num_predict": 900}}
     async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=5)) as c:

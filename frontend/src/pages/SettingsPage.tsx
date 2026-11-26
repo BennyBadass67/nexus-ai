@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Moon, Sun, MoonStar, Check, Sparkles } from "lucide-react";
 import { api, ToolInfo } from "../api";
 import { extrasApi } from "../api";
+import CloudSettings from "../components/CloudSettings";
 import UpdateCard from "../components/UpdateCard";
 import { useApp } from "../store";
 
@@ -101,6 +102,8 @@ export default function SettingsPage() {
       <Sec t="Oppdateringer" d="Sjekker GitHub for en nyere versjon.">
         <UpdateCard />
       </Sec>
+
+      <Sec t="Sky-KI (valgfritt)" d="Bruk gratis skymodeller når den lokale modellen er for liten. Lokal bruk er alltid standard."><CloudSettings /></Sec>
 
       <Sec t="Sikkerhetskopi" d="Alle samtaler, minner, agenter, team og notater i én fil. Lagres bare der du velger.">
         <div className="flex flex-wrap items-center gap-3">

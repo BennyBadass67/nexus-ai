@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.1.0: Studie (øvingskort fra egen tekst), skriveverktøy, spør dokumentene dine med kilder, automatiske samtaletitler og oppfølgingsforslag, og jevnere animasjoner."
+          releaseBody: "1.2.0: Gratis sky-KI (Cloudflare, OpenRouter, Groq, Gemini, egendefinert) som valg under Settings, med lokal modell som standard. Modellduell. Kontrastfiks."
           releaseDraft: false
           prerelease: false

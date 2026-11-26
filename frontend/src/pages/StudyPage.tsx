@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GraduationCap, PenLine, Sparkles, Trash2, Loader2, Copy, Check, RotateCcw, Layers } from "lucide-react";
+import { GraduationCap, PenLine, Sparkles, Trash2, Loader2, Copy, Check, RotateCcw, Layers, Swords } from "lucide-react";
 import { Card, Deck, studyApi } from "../api";
 import { useApp } from "../store";
 
@@ -109,19 +109,63 @@ function Write({ model }: { model: string }) {
   );
 }
 
+type Side = { text: string; ms: number; state: "idle" | "wait" | "run" | "done" | "err" };
+const idle: Side = { text: "", ms: 0, state: "idle" };
+function Duel() {
+  const { models, model } = useApp();
+  const names = models?.models.map((m) => m.name) ?? [];
+  const [a, setA] = useState(model); const [b, setB] = useState(names.find((n) => n !== model) ?? model);
+  const [q, setQ] = useState(""); const [L, setL] = useState<Side>(idle); const [R, setR] = useState<Side>(idle);
+  const [busy, setBusy] = useState(false); const ctl = useRef<AbortController | null>(null);
+  const go = async () => {
+    const c = new AbortController(); ctl.current = c; setBusy(true); setL({ ...idle, state: "wait" }); setR({ ...idle, state: "wait" });
+    for (const [m, set] of [[a, setL], [b, setR]] as const) {
+      const t0 = performance.now(); set({ text: "", ms: 0, state: "run" });
+      try {
+        await studyApi.complete(m, q, (t) => set((s) => ({ ...s, text: s.text + t, ms: performance.now() - t0 })), c.signal);
+        set((s) => ({ ...s, ms: performance.now() - t0, state: s.text.includes("[Feil:") ? "err" : "done" }));
+      } catch { set((s) => ({ ...s, state: "err" })); if (c.signal.aborted) break; }
+    }
+    setBusy(false);
+  };
+  const rate = (s: Side) => (s.state === "done" && s.ms > 0 ? s.text.length / 4 / (s.ms / 1000) : 0);
+  const fast = rate(L) && rate(R) ? (rate(L) >= rate(R) ? "L" : "R") : "";
+  const sel = "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none";
+  const col = (name: string, s: Side, w: boolean) => (
+    <div className={`glass-soft flex min-h-[220px] flex-col rounded-2xl p-4 transition ${w ? "ring-2 ring-emerald-500/60" : ""}`}>
+      <div className="flex items-center gap-2 text-sm font-medium"><span className="truncate">{name}</span>
+        {w && <span style={{ background: "#065f46", color: "#fff" }} className="animate-pop rounded-full px-2 py-0.5 text-[11px] font-normal">raskest</span>}
+        {s.state === "run" && <Loader2 size={13} className="ml-auto animate-spin" />}</div>
+      <div className="mt-2 min-h-0 flex-1 overflow-auto whitespace-pre-wrap text-sm">{s.state === "wait" ? <span className="text-white/60">Venter på tur…</span> : s.text}</div>
+      {s.state === "done" && <div className="mt-2 text-xs text-white/65">{(s.ms / 1000).toFixed(1)} s · ca. {rate(s).toFixed(1)} tegn-tokens/s</div>}
+    </div>);
+  return (
+    <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
+      <p className="text-xs text-white/60">Samme spørsmål til to modeller, én om gangen (8 GB RAM tåler ikke to samtidig). Tiden inkluderer lasting av modellen første gang.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select className={sel} value={a} onChange={(e) => setA(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select>
+        <span className="text-sm text-white/60">mot</span>
+        <select className={sel} value={b} onChange={(e) => setB(e.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select>
+      </div>
+      <div className="flex gap-2"><input className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-nx-blue/60" placeholder="Spørsmål til begge modellene…" value={q} maxLength={1000} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && q.trim() && !busy && go()} />
+        {busy ? <button className="btn" onClick={() => ctl.current?.abort()}>Stopp</button> : <button className="btn-primary" disabled={!q.trim() || !a || !b} onClick={go}>Start duell</button>}</div>
+      <div className="grid gap-3 md:grid-cols-2">{col(a, L, fast === "L")}{col(b, R, fast === "R")}</div>
+    </div>);
+}
+
 export default function StudyPage() {
   const { model } = useApp();
-  const [tab, setTab] = useState<"cards" | "write">("cards");
+  const [tab, setTab] = useState<"cards" | "write" | "duel">("cards");
   return (
     <div className="glass flex h-full flex-col overflow-hidden rounded-[28px] p-6">
       <div className="flex items-center gap-3">
         <div><h1 className="text-xl font-semibold">Studie</h1><p className="text-sm text-white/55">Lag øvingskort av pensum og jobb med tekster. Alt kjører lokalt{model ? ` med ${model}` : ""}.</p></div>
         <div className="ml-auto flex gap-1 rounded-2xl glass-soft p-1 text-sm">
-          {([["cards", "Kort", GraduationCap], ["write", "Skriveverktøy", PenLine]] as const).map(([id, l, I]) => (
+          {([["cards", "Kort", GraduationCap], ["write", "Skriveverktøy", PenLine], ["duel", "Modellduell", Swords]] as const).map(([id, l, I]) => (
             <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition ${tab === id ? "bg-white/15 font-medium" : "text-white/60"}`}><I size={14} />{l}</button>))}
         </div>
       </div>
-      {tab === "cards" ? <Cards model={model} /> : <Write model={model} />}
+      {tab === "cards" ? <Cards model={model} /> : tab === "write" ? <Write model={model} /> : <Duel />}
     </div>
   );
 }
