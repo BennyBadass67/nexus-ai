@@ -60,12 +60,29 @@ def update_status():
         return dict(STATE)
 
 
+def ulog(msg: str) -> None:
+    """Logg til ~/.nexus-ai/updater.log (samme fil som appen bruker), så feil kan leses i ettertid."""
+    try:
+        d = Path.home() / ".nexus-ai"
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / "updater.log", "a", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + "backend: " + msg + "\n")
+    except OSError:
+        pass
+
+
 def launch_installer(path: Path) -> None:
-    """Starter installeren uten at den blir barn av backend-prosessen (installeren dreper nexus-backend med taskkill /T)."""
+    """Starter installeren via Windows ShellExecute (vanlig, synlig vindu, løsrevet fra backend-prosessen som installeren selv dreper).
+    /P = passiv (viser fremdrift), /R = start appen på nytt etterpå. Feil fra Windows kastes, så de vises for brukeren."""
     if sys.platform != "win32":
         raise RuntimeError("Installasjon i appen virker bare på Windows")
-    # cmd /c start løsriver installeren fra prosesstreet vårt. /P = passiv (viser fremdrift), /R = start appen på nytt etterpå.
-    subprocess.Popen(["cmd", "/c", "start", "", str(path), "/P", "/R"], creationflags=0x08000000, close_fds=True)
+    import ctypes
+    ctypes.windll.shell32.ShellExecuteW.restype = ctypes.c_void_p
+    rc = ctypes.windll.shell32.ShellExecuteW(None, "open", str(path), "/P /R", str(path.parent), 1)
+    rc = rc or 0
+    ulog(f"ShellExecute {path} -> {rc}")
+    if rc <= 32:
+        raise RuntimeError(f"Windows kunne ikke starte installasjonsfilen (kode {rc}). Dobbeltklikk filen manuelt.")
 
 
 def _download(url: str, version: str) -> None:
@@ -94,6 +111,7 @@ def _download(url: str, version: str) -> None:
                 raise RuntimeError("Filen er ikke en Windows-installer.")
         os.replace(part, dest)
         _set(state="launching", path=str(dest))
+        ulog(f"lastet ned {dest} ({got} byte), starter installer")
         launch_installer(dest)
         _set(state="started")
     except Exception as e:
