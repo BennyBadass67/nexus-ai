@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { api, Prefs, Health, ModelsResp, Pull, streamPull } from "./api";
 
-const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "dark", accent: "#5aa9ff", aurora: "on", perf: "light", reply_lang: "auto", intro: "on" };
+const DEF: Prefs = { agent_name: "NEXUS", user_name: "Benjamin", persona: "", theme: "glass", accent: "#e8553f", aurora: "on", perf: "light", reply_lang: "auto", intro: "on" };
 function applyPrefs(p: Prefs) {
   const h = document.documentElement; const v = parseInt(p.accent.slice(1), 16);
   const rgb = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
