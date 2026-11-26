@@ -95,3 +95,30 @@ def plan(b: PlanIn):
             if not extras.add_note(it["text"], it["due"], source="plan")["duplicate"]:
                 added += 1
     return {"items": items, "added": added}
+
+
+@router.get("/api/study/weak")
+def weak_quiz(n: int = 10):
+    """Flervalgsquiz på tvers av alle stokker, med kortene du sliter mest med først (flest feil, lavest «ease»).
+    Feil svaralternativer hentes fra andre kort. Trenger minst 4 kort totalt."""
+    import random
+    n = max(1, min(n, 30))
+    with db.conn() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT c.id, c.front, c.back, c.lapses, c.ease, c.reps, d.title AS deck FROM cards c JOIN decks d ON d.id=c.deck_id").fetchall()]
+    if len(rows) < 4:
+        raise HTTPException(422, "Trenger minst 4 kort totalt for å lage en quiz.")
+    random.shuffle(rows)                                   # jevn fordeling blant like svake kort
+    rows.sort(key=lambda r: (-(r["lapses"] or 0), r["ease"] if r["ease"] else 2.5))
+    pool = list({r["back"].strip().lower(): r["back"] for r in rows}.values())
+    qs = []
+    for r in rows[:n]:
+        others = [b for b in pool if b.strip().lower() != r["back"].strip().lower()]
+        random.shuffle(others)
+        opts = others[:3] + [r["back"]]
+        if len(opts) < 2:
+            continue
+        random.shuffle(opts)
+        qs.append({"card_id": r["id"], "question": r["front"], "options": opts, "answer": opts.index(r["back"]),
+                   "deck": r["deck"], "lapses": r["lapses"] or 0})
+    return qs

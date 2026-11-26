@@ -15,6 +15,9 @@ function Cards({ model }: { model: string }) {
   const startQuiz = async (d: Deck) => {
     try { const qs = await studyApi.quiz(d.id); setErr(""); setOk(""); setQuiz({ deck: d, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
   };
+  const startWeak = async () => {
+    try { const qs = await studyApi.weak(10); setErr(""); setOk(""); setQuiz({ deck: { id: 0, title: "Svake kort (alle stokker)" } as Deck, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
+  };
   const answer = (k: number) => {
     if (!quiz || quiz.pick !== null) return; const q = quiz.qs[quiz.i]; const good = k === q.answer;
     studyApi.review(q.card_id, good ? 2 : 0).catch(() => {});
@@ -99,6 +102,12 @@ function Cards({ model }: { model: string }) {
       </div>
       <div className="space-y-2">
         {decks.length === 0 && <div className="glass-soft rounded-3xl p-8 text-center text-sm text-white/60">Ingen stokker ennå. Lag den første til venstre.</div>}
+        {decks.reduce((a, d) => a + d.total, 0) >= 4 && (
+          <div className="glass-soft flex animate-rise items-center gap-3 rounded-2xl px-4 py-3">
+            <Flame size={18} className="flex-none" />
+            <div className="min-w-0 flex-1"><div className="font-medium">Tren svake kort</div><div className="text-xs text-white/70">10 spørsmål på tvers av alle stokker, med de du sliter mest med først.</div></div>
+            <button className="btn-primary" onClick={startWeak}>Start</button>
+          </div>)}
         {decks.map((d) => (
           <div key={d.id} className="glass-soft group flex animate-rise items-center gap-3 rounded-2xl px-4 py-3">
             <Layers size={18} className="flex-none text-white/60" />
