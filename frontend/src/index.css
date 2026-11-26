@@ -317,3 +317,12 @@ html.frost .md a, html.frost .cursor::after { color: #cdbbff; } html.frost .curs
 }
 html.frost .text-nx-blue { color: #e6dcff !important; }
 html.frost .text-nx-ice { color: #f1ebff !important; }
+/* Glidende aktiv-markør i sidebar (Frost): pillen flytter seg mykt mellom valgene */
+.nav-slider { display: none; }
+html.frost .nav-slider { display: block; position: absolute; left: 0; right: 0; top: 0; border-radius: 16px; pointer-events: none; z-index: 0;
+  background: linear-gradient(100deg, rgb(var(--accent) / .55), rgb(var(--accent) / .16)); box-shadow: 0 0 28px -4px rgb(var(--accent) / .8), inset 0 1px 0 rgba(255,255,255,.4);
+  transition: transform .45s cubic-bezier(.34,1.4,.5,1), height .3s; }
+html.frost .nav-item.on, html.frost .nav-item.on:hover { background: transparent; box-shadow: none; animation: none !important; }
+html.frost .nav-item > * { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { html.frost .nav-slider { transition: none; } }
+html.frost .nav-item.on::before { display: none; }

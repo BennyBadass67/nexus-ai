@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "1.9.0: Automatisk oppdatering i bakgrunnen med tilbud om omstart."
+          releaseBody: "2.0.0: Glidende sidebar-markør i Frost og opptelling av tall på Home."
           releaseDraft: false
           prerelease: false

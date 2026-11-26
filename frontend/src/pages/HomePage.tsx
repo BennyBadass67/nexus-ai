@@ -1,3 +1,4 @@
+import CountUp from "../components/CountUp";
 import { SysMonCard, NotesCard, StudyCard, TodayCard } from "../components/HomeWidgets";
 import { useEffect, useState } from "react";
 import { MessageSquare, Cpu, Database, ArrowUpRight, Download, Zap, Brain, Users, Boxes, FolderOpen, Activity, Plus } from "lucide-react";
@@ -31,7 +32,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
   const stat = (Icon: typeof Cpu, label: string, value: string, sub: string, delay: number, hot = false) => (
     <div className={`${hot ? "stat-hot" : "glass"} animate-rise rounded-[26px] p-5`} style={{ animationDelay: `${delay}ms` }}>
       <div className={`grid h-9 w-9 place-items-center rounded-full ${hot ? "bg-black/20" : "bg-white/60"}`}><Icon size={16} className={hot ? "" : "text-nx-blue"} /></div>
-      <div className="mt-5 truncate text-[30px] font-semibold leading-none tracking-tight">{value}</div>
+      <div className="mt-5 truncate text-[30px] font-semibold leading-none tracking-tight">{/^\d+$/.test(value) ? <CountUp value={Number(value)} /> : value}</div>
       <div className="mt-2 text-sm font-medium">{label}</div>
       <div className="truncate text-xs text-white/50">{sub}</div>
     </div>);

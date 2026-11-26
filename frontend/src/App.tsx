@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Home, MessageSquare, Boxes, FolderOpen, Workflow, Brain, Activity, Settings, Sparkles, Command, StickyNote, GraduationCap, Mail } from "lucide-react";
 import { Provider, useApp } from "./store";
 import { api, Conv, extrasApi, updateApi } from "./api";
@@ -37,6 +37,7 @@ type Page = (typeof NAV)[number]["id"];
 function Shell() {
   const [page, setPage] = useState<Page>(() => (localStorage.getItem("nexus.page") as Page) || "home");
   const [palette, setPalette] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null); const [slide, setSlide] = useState<{ top: number; h: number } | null>(null);
   const [openConv, setOpenConv] = useState<number | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
   const [newVer, setNewVer] = useState<string | null>(null);
@@ -57,6 +58,10 @@ function Shell() {
   const { health, model, models, setModel, pulls, prefs } = useApp();
   const online = !!health?.ollama_online;
     const nav = (p: Page) => { setPage(p); localStorage.setItem("nexus.page", p); };
+  useLayoutEffect(() => {
+    const m = () => { const el = navRef.current?.querySelector<HTMLElement>(".nav-item.on"); if (el) setSlide({ top: el.offsetTop, h: el.offsetHeight }); };
+    m(); window.addEventListener("resize", m); return () => window.removeEventListener("resize", m);
+  }, [page, prefs.theme]);
   const pulling = Object.entries(pulls).filter(([, p]) => !p.done && !p.error);
 
   useEffect(() => {
@@ -91,7 +96,8 @@ function Shell() {
           <div className="hidden md:block"><div className="text-[15px] font-semibold tracking-wide">{prefs.agent_name}</div>
             <div className="text-[11px] text-white/45">personlig agent</div></div>
         </div>
-        <div className="relative flex flex-col gap-1">
+        <div ref={navRef} className="relative flex flex-col gap-1">
+          {slide && <div className="nav-slider" aria-hidden style={{ transform: `translateY(${slide.top}px)`, height: slide.h }} />}
           {NAV.map(({ id, label, icon: Icon }) => (
             <div key={id} className="contents">
               {SECTIONS[id] && <div className={`nav-label hidden px-4 pb-1 md:block ${id === "home" ? "" : "pt-3"}`}>{SECTIONS[id]}</div>}
