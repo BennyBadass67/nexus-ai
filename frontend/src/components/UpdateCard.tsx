@@ -37,6 +37,17 @@ export default function UpdateCard() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Etter at installeren er startet: vent på at den nye versjonen svarer. Svarer fortsatt gammel versjon etter 90 sek, har installasjonen feilet.
+  const watchRestart = (to: string | null, path: string | null) => {
+    const t0 = Date.now();
+    const id = setInterval(() => {
+      updateApi.check().then((u) => {
+        if (to && u.current === to) { clearInterval(id); window.location.reload(); }
+        else if (Date.now() - t0 > 90_000) { clearInterval(id); setErr(`Installasjonen ser ikke ut til å ha gått gjennom (appen kjører fortsatt ${u.current}).${path ? " Kjør filen selv: " + path : ""}`); setPhase("error"); }
+      }).catch(() => { /* backend er nede mens installeren jobber */ });
+    }, 3000);
+  };
+
   const install = async () => {
     setErr(""); setSpeed(0); setShown(0); target.current = 0; samples.current = [];
     try { await updateApi.install(); } catch (e) { setErr(String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); setPhase("error"); return; }
@@ -49,7 +60,7 @@ export default function UpdateCard() {
       samples.current = samples.current.filter((x) => now - x.t < 4000);
       const a = samples.current[0]; if (a && now > a.t) setSpeed(((s.done - a.d) / (now - a.t)) * 1000);
       if (s.state === "launching") { target.current = 1; setPhase("installing"); }
-      if (s.state === "started") { target.current = 1; setPhase("installing"); try { localStorage.setItem("nexus.updating", JSON.stringify({ from: info?.current, to: s.version })); } catch { /* */ } setTimeout(() => setPhase("restarting"), 3500); clearInterval(t); }
+      if (s.state === "started") { target.current = 1; setPhase("installing"); try { localStorage.setItem("nexus.updating", JSON.stringify({ from: info?.current, to: s.version })); } catch { /* */ } setTimeout(() => { setPhase("restarting"); watchRestart(s.version, s.path); }, 3500); clearInterval(t); }
       if (s.state === "error") { clearInterval(t); setErr(s.error || "Ukjent feil"); setPhase("error"); }
     }).catch(() => { if (++fails >= 3) { clearInterval(t); setPhase("restarting"); } }), 500);
   };
@@ -125,9 +136,15 @@ export function AutoUpdateBar() {
     const tick = () => updateApi.status().then((s) => alive && setSt(s)).catch(() => {});
     tick(); const id = setInterval(tick, 4000); return () => { alive = false; clearInterval(id); };
   }, []);
+  const go = async () => { setErr(""); try { await updateApi.install(); } catch (e) { setErr(String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); } };
+  if (st && st.state === "error" && hide !== "err:" + st.error) return (
+    <div className="upd-toast animate-pop" role="status" style={{ bottom: 20 }}>
+      <span className="upd-err"><TriangleAlert size={18} /></span>
+      <div><div className="upd-h">Automatisk oppdatering stoppet</div><div className="upd-s">{st.error}</div>
+        <div className="mt-2 flex gap-2"><button className="btn-primary" onClick={go}><RefreshCw size={14} /> Prøv igjen</button><button className="btn-ghost" onClick={() => setHide("err:" + st.error)}>Lukk</button></div></div>
+    </div>);
   if (!st || (st.state !== "downloading" && st.state !== "ready" && st.state !== "launching" && st.state !== "started")) return null;
   const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
-  const go = async () => { setErr(""); try { await updateApi.install(); } catch (e) { setErr(String(e).replace(/^Error: \d+ /, "").replace(/^\{"detail":"(.*)"\}$/, "$1")); } };
   if (st.state === "downloading") return (
     <div className="upd-toast animate-pop" role="status" style={{ bottom: 20 }}>
       <span className="upd-ring"><Download size={18} /></span>

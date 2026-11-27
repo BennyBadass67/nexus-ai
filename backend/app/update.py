@@ -71,18 +71,38 @@ def ulog(msg: str) -> None:
         pass
 
 
+def _spawn_detached(path: Path) -> bool:
+    """Starter installeren via WMI (Win32_Process.Create), så den ikke er barn av backend/appen.
+    Installerens egen taskkill /T mot nexus-ai/nexus-backend (og en jobb som lukkes med appen) kan ellers drepe selve installeren midt i."""
+    import subprocess
+    cmd = f'"{path}" /P /R'.replace("'", "''")
+    ps = ("$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create "
+          f"-Arguments @{{CommandLine='{cmd}'; CurrentDirectory='{str(path.parent)}'}}; "
+          "if ($r.ReturnValue -ne 0) { exit 3 }; Write-Output $r.ProcessId")
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, text=True,
+                             timeout=20, creationflags=0x0800_0000)
+        ulog(f"WMI-start {path} -> rc={out.returncode} pid={out.stdout.strip()} err={out.stderr.strip()[:200]}")
+        return out.returncode == 0
+    except Exception as e:  # noqa: BLE001
+        ulog(f"WMI-start feilet: {e}")
+        return False
+
+
 def launch_installer(path: Path) -> None:
-    """Starter installeren via Windows ShellExecute (vanlig, synlig vindu, løsrevet fra backend-prosessen som installeren selv dreper).
-    /P = passiv (viser fremdrift), /R = start appen på nytt etterpå. Feil fra Windows kastes, så de vises for brukeren."""
+    """Starter installeren frikoblet fra appen (WMI), med ShellExecute som reserve.
+    /P = passiv (viser fremdrift), /R = start appen på nytt etterpå. Feil kastes, så de vises for brukeren."""
     if sys.platform != "win32":
         raise RuntimeError("Installasjon i appen virker bare på Windows")
+    if _spawn_detached(path):
+        return
     import ctypes
     ctypes.windll.shell32.ShellExecuteW.restype = ctypes.c_void_p
     rc = ctypes.windll.shell32.ShellExecuteW(None, "open", str(path), "/P /R", str(path.parent), 1)
     rc = rc or 0
     ulog(f"ShellExecute {path} -> {rc}")
     if rc <= 32:
-        raise RuntimeError(f"Windows kunne ikke starte installasjonsfilen (kode {rc}). Dobbeltklikk filen manuelt.")
+        raise RuntimeError(f"Windows kunne ikke starte installasjonsfilen (kode {rc}). Dobbeltklikk filen manuelt: {path}")
 
 
 def _download(url: str, version: str, launch: bool = True) -> None:
@@ -177,11 +197,15 @@ async def auto_tick() -> str:
     if APP_VERSION == "dev" or not autoupdate_on():
         return "off"
     with _lock:
-        if STATE["state"] in ("downloading", "launching", "started", "ready"):
-            return STATE["state"]
+        cur = STATE["state"]
+        if cur in ("downloading", "launching", "started"):
+            return cur
+        have = STATE.get("version") if cur == "ready" and STATE.get("path") and Path(STATE["path"]).exists() else None
     info = await fetch_latest()
     if info["error"] or not info["available"]:
         return "none"
+    if have and have == info["latest"]:
+        return "ready"
     url = info["url"] or ""
     if not url.startswith(ALLOWED_PREFIX) or not url.lower().endswith(".exe"):
         ulog("auto: ugyldig nedlastingsadresse, hopper over")

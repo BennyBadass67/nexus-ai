@@ -166,3 +166,26 @@ def test_auto_rejects_bad_host_and_bad_file(c):
 def test_autoupdate_pref_validation(c):
     assert c.put("/api/settings", json={"autoupdate": "maybe"}).status_code == 422
     assert c.get("/api/settings").json()["autoupdate"] in ("on", "off")
+
+
+def test_installer_is_started_detached_via_wmi(monkeypatch, tmp_path):
+    """Installeren må ikke være barn av appen (installerens taskkill /T ville drept den). Sjekker kommandoen vi sender til PowerShell."""
+    import subprocess
+    from app import update
+    seen = {}
+    class R:  # noqa: D401
+        returncode = 0; stdout = "1234\n"; stderr = ""
+    def fake_run(args, **kw):
+        seen["args"] = args; seen["kw"] = kw
+        return R()
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    p = tmp_path / "NEXUS_AI_9.9.9_setup.exe"
+    assert update._spawn_detached(p) is True
+    cmd = seen["args"][-1]
+    assert "Win32_Process" in cmd and "/P /R" in cmd and str(p) in cmd
+
+
+def test_hooks_do_not_kill_process_tree():
+    from pathlib import Path
+    h = (Path(__file__).resolve().parents[2] / "src-tauri" / "windows" / "hooks.nsh").read_text(encoding="utf-8")
+    assert "taskkill /F /T" not in h
