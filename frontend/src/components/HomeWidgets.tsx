@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Cpu, MemoryStick, StickyNote, Check, Plus } from "lucide-react";
+import { Cpu, MemoryStick, StickyNote, Check, Plus, Timer } from "lucide-react";
 import { GraduationCap } from "lucide-react";
 import { Deck, extrasApi, Note, studyApi, SysMon, Today, todayApi } from "../api";
 import { CalendarCheck, Cloud, MessageSquare } from "lucide-react";
@@ -90,6 +90,43 @@ export function TodayCard({ go }: { go: (p: string) => void }) {
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="sysbar h-full transition-all duration-700" style={{ width: q.pct + "%" }} /></div></div>))}</button>
         <button className={tile} onClick={() => go("assistant")}><div className="flex items-center gap-1 text-xs text-white/65"><MessageSquare size={12} />Fortsett</div>
           {t.last_chat ? <><div className="mt-1.5 line-clamp-2 text-sm font-medium">{t.last_chat.title}</div>{t.last_chat.project && <div className="mt-auto text-xs text-white/65">Prosjekt: {t.last_chat.project}</div>}</> : <div className="mt-2 text-xs text-white/60">Start din første samtale.</div>}</button>
+      </div>
+    </div>);
+}
+
+const FOCUS_KEY = "nexus.focus";
+type FocusState = { mode: "focus" | "break"; end: number | null; left: number; done: number; day: string };
+const day = () => new Date().toISOString().slice(0, 10);
+const LEN = { focus: 25 * 60, break: 5 * 60 };
+const loadFocus = (): FocusState => {
+  try { const s = JSON.parse(localStorage.getItem(FOCUS_KEY) || ""); if (s && s.day === day()) return s; if (s) return { mode: "focus", end: null, left: LEN.focus, done: 0, day: day() }; } catch { /* ignore */ }
+  return { mode: "focus", end: null, left: LEN.focus, done: 0, day: day() };
+};
+
+export function FocusCard() {
+  const [s, setS] = useState<FocusState>(loadFocus);
+  const [, tick] = useState(0);
+  useEffect(() => { localStorage.setItem(FOCUS_KEY, JSON.stringify(s)); }, [s]);
+  useEffect(() => { if (s.end == null) return; const t = setInterval(() => tick((x) => x + 1), 500); return () => clearInterval(t); }, [s.end]);
+  const left = s.end == null ? s.left : Math.max(0, Math.round((s.end - Date.now()) / 1000));
+  useEffect(() => {
+    if (s.end != null && left === 0) {
+      const next = s.mode === "focus" ? "break" : "focus";
+      setS({ mode: next, end: null, left: LEN[next], done: s.done + (s.mode === "focus" ? 1 : 0), day: day() });
+    }
+  }, [left, s]);
+  const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
+  const total = LEN[s.mode], pct = Math.round(((total - left) / total) * 100);
+  const running = s.end != null;
+  return (
+    <div className="glass animate-rise rounded-[26px] p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold"><Timer size={15} />Fokus<span className="ml-auto text-xs font-normal text-white/60">{s.done} økt{s.done === 1 ? "" : "er"} i dag</span></div>
+      <div className="mt-3 flex items-end gap-3"><div className="text-4xl font-semibold tabular-nums">{mm}:{ss}</div><div className="pb-1 text-xs text-white/65">{s.mode === "focus" ? "lekser/arbeid (25 min)" : "pause (5 min)"}</div></div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="sysbar h-full transition-all duration-700" style={{ width: pct + "%" }} /></div>
+      <div className="mt-3 flex gap-2">
+        <button className="btn-primary" onClick={() => setS(running ? { ...s, end: null, left } : { ...s, end: Date.now() + left * 1000 })}>{running ? "Pause" : left < total ? "Fortsett" : "Start"}</button>
+        <button className="btn" onClick={() => setS({ ...s, end: null, left: total })}>Nullstill</button>
+        <button className="btn" onClick={() => { const n = s.mode === "focus" ? "break" : "focus"; setS({ ...s, mode: n, end: null, left: LEN[n] }); }}>{s.mode === "focus" ? "Hopp til pause" : "Hopp til fokus"}</button>
       </div>
     </div>);
 }

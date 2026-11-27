@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "2.3.0: Hurtigtaster Alt+1..0 for sidene."
+          releaseBody: "2.4.0: Fokus-timer (25/5 min) på Home."
           releaseDraft: false
           prerelease: false
