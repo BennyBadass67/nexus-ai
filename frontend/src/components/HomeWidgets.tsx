@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Cpu, Hourglass, MemoryStick, StickyNote, Check, Plus, Timer, Trash2 } from "lucide-react";
+import { useApp } from "../store";
 import { GraduationCap } from "lucide-react";
 import { Deck, Exam, extrasApi, FocusStats, Note, schoolApi, studyApi, SysMon, Today, todayApi } from "../api";
 import { CalendarCheck, Cloud, MessageSquare } from "lucide-react";
@@ -103,7 +104,10 @@ const loadFocus = (): FocusState => {
   return { mode: "focus", end: null, left: LEN.focus, done: 0, day: day() };
 };
 
+const GOALS: [string, string][] = [["off", "Av"], ["120", "2 t"], ["300", "5 t"], ["600", "10 t"]];
+
 export function FocusCard() {
+  const { prefs, setPrefs } = useApp();
   const [s, setS] = useState<FocusState>(loadFocus);
   const [stats, setStats] = useState<FocusStats | null>(null);
   const [, tick] = useState(0);
@@ -130,6 +134,18 @@ export function FocusCard() {
         <button className="btn-primary" onClick={() => setS(running ? { ...s, end: null, left } : { ...s, end: Date.now() + left * 1000 })}>{running ? "Pause" : left < total ? "Fortsett" : "Start"}</button>
         <button className="btn" onClick={() => setS({ ...s, end: null, left: total })}>Nullstill</button>
         <button className="btn" onClick={() => { const n = s.mode === "focus" ? "break" : "focus"; setS({ ...s, mode: n, end: null, left: LEN[n] }); }}>{s.mode === "focus" ? "Hopp til pause" : "Hopp til fokus"}</button>
+      </div>
+      <div className="mt-3 border-t border-white/10 pt-3">
+        <div className="flex items-center gap-2 text-xs text-white/65">Ukemål
+          <span className="ml-auto flex gap-1">{GOALS.map(([v, l]) => (
+            <button key={v} onClick={() => setPrefs({ focus_goal: v as typeof prefs.focus_goal })}
+              className={`rounded-full px-2 py-0.5 transition ${prefs.focus_goal === v ? "bg-nx-blue/30 ring-1 ring-nx-blue/70" : "bg-white/10 hover:bg-white/20"}`}>{l}</button>))}</span>
+        </div>
+        {prefs.focus_goal !== "off" && stats && (
+          <div className="mt-2">
+            <div className="flex items-baseline justify-between text-xs"><span className="tabular-nums text-white/70">{stats.week_min} av {prefs.focus_goal} min siste 7 dager</span><span className="tabular-nums text-white/60">{Math.min(100, Math.round((stats.week_min / +prefs.focus_goal) * 100))} %</span></div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="sysbar h-full transition-all duration-700" style={{ width: `${Math.min(100, (stats.week_min / +prefs.focus_goal) * 100)}%` }} /></div>
+          </div>)}
       </div>
     </div>);
 }

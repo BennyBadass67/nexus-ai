@@ -23,7 +23,7 @@ export type Topic = { id: string; title: string; desc: string; model: RecModel |
 export type Bench = { model: string; tokens: number; tps: number; load_s: number };
 export type Pull = { status: string; total?: number | null; completed?: number | null; error?: string; done?: boolean };
 
-export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass" | "frost"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off"; autoupdate: "on" | "off" };
+export type Prefs = { agent_name: string; user_name: string; persona: string; theme: "dark" | "midnight" | "light" | "glass" | "frost"; intro: "on" | "off"; accent: string; aurora: "on" | "off"; perf: "light" | "full"; reply_lang: string; screen_control: "on" | "off"; autoupdate: "on" | "off"; focus_goal: "off" | "120" | "300" | "600" };
 
 export type AgentDef = { id: number; name: string; role: string; prompt: string; model: string | null; tools: string[] };
 export type Room = { id: number; title: string; agent_ids: number[]; max_rounds: number; mode: "roundrobin" | "leader" };
@@ -221,6 +221,7 @@ export const studyApi = {
   quiz: (id: number, n = 10) => j<{ card_id: number; question: string; options: string[]; answer: number }[]>(`/api/study/decks/${id}/quiz?n=${n}`),
   weak: (n = 10) => j<{ card_id: number; question: string; options: string[]; answer: number; deck: string; lapses: number }[]>(`/api/study/weak?n=${n}`),
   delDeck: (id: number) => j<{ ok: boolean }>("/api/study/decks/" + id, { method: "DELETE" }),
+  quick: (b: { title?: string; text: string; deck_id?: number }) => j<{ deck_id: number; added: number }>("/api/study/decks/quick", { method: "POST", headers: J, body: JSON.stringify(b) }),
   ask: async (model: string, q: string, onTok: (t: string) => void) => {
     const r = await fetch("/api/knowledge/ask", { method: "POST", headers: J, body: JSON.stringify({ model, q }) });
     if (!r.ok || !r.body) throw new Error(await r.text());

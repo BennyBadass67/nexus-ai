@@ -40,3 +40,13 @@ def test_glass_theme_and_intro_prefs(client=None):
     assert c.get("/api/settings").json()["theme"] == "glass"
     assert c.put("/api/settings", json={"intro": "maybe"}).status_code == 422
     c.put("/api/settings", json={"theme": "dark", "intro": "on"})
+
+
+def test_focus_goal_pref(client):
+    c, _ = client
+    r = c.put("/api/settings", json={"focus_goal": "300"})
+    assert r.status_code == 200 and r.json()["focus_goal"] == "300"
+    assert c.get("/api/settings").json()["focus_goal"] == "300"
+    assert c.put("/api/settings", json={"focus_goal": "123"}).status_code == 422
+    r = c.put("/api/settings", json={"focus_goal": "off"})
+    assert r.status_code == 200 and r.json()["focus_goal"] == "off"

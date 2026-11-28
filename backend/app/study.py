@@ -160,6 +160,50 @@ async def generate(g: GenIn):
     return {"deck_id": did, "added": len(cards), "cards": cards}
 
 
+# v2.7.0: Hurtigkort - lim inn ferdige par ("front = bak") og fa en stokk med en gang, uten modell.
+SEP_RE = re.compile(r"\s*(?:=|\||;|\t|\s-\s)\s*")
+
+
+class QuickIn(BaseModel):
+    title: str = Field(default="", max_length=120)
+    text: str = Field(min_length=1, max_length=60000)
+    deck_id: int | None = None
+
+
+def parse_pairs(text: str) -> list[tuple[str, str]]:
+    """Ren logikk: en linje = ett kort. Separator =, |, ;, tab eller ' - '. Tomme/darlige linjer hoppes over."""
+    out = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = SEP_RE.split(line, maxsplit=1)
+        if len(parts) != 2:
+            continue
+        front, back = parts[0].strip(), parts[1].strip()
+        if front and back and len(front) <= 500 and len(back) <= 1000:
+            out.append((front, back))
+    return out
+
+
+@router.post("/api/study/decks/quick", status_code=201)
+def quick_deck(b: QuickIn):
+    pairs = parse_pairs(b.text)
+    if not pairs:
+        raise HTTPException(422, "Fant ingen linjer paa formen «sporsmaal = svar».")
+    now = time.time()
+    with db.conn() as c:
+        if b.deck_id is None:
+            did = c.execute("INSERT INTO decks(title,created_at) VALUES(?,?)", ((b.title.strip() or "Hurtigkort")[:120], now)).lastrowid
+        else:
+            if not c.execute("SELECT 1 FROM decks WHERE id=?", (b.deck_id,)).fetchone():
+                raise HTTPException(404, "Stokken finnes ikke")
+            did = b.deck_id
+        for front, back in pairs:
+            c.execute("INSERT INTO cards(deck_id,front,back,due) VALUES(?,?,?,0)", (did, front, back))
+    return {"deck_id": did, "added": len(pairs)}
+
+
 @router.get("/api/study/decks")
 def decks():
     now = time.time()

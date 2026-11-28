@@ -43,9 +43,9 @@ SYSTEM_PROMPT = (
 HISTORY_LIMIT = 30
 
 PREF_DEFAULTS = {"agent_name": "NEXUS", "user_name": "Benjamin", "persona": "", "theme": "dark",
-                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off", "autoupdate": "on"}
+                 "accent": "#5aa9ff", "aurora": "on", "perf": "light", "reply_lang": "auto", "intro": "on", "screen_control": "off", "autoupdate": "on", "focus_goal": "off"}
 PREF_LIMITS = {"agent_name": 24, "user_name": 40, "persona": 4000, "accent": 7}
-PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass", "frost"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}, "autoupdate": {"on", "off"}}
+PREF_CHOICES = {"theme": {"dark", "midnight", "light", "glass", "frost"}, "intro": {"on", "off"}, "aurora": {"on", "off"}, "perf": {"light", "full"}, "screen_control": {"on", "off"}, "autoupdate": {"on", "off"}, "focus_goal": {"off", "120", "300", "600"}}
 
 
 def get_prefs() -> dict:

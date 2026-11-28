@@ -188,3 +188,24 @@ def test_complete_stream_and_errors():
     assert "Feil" in client.post("/api/complete", json={"model": "nope", "prompt": "Hei"}).text
     assert client.post("/api/complete", json={"model": "mock:1b", "prompt": ""}).status_code == 422
     assert client.post("/api/complete", json={"model": "mock:1b", "prompt": "x" * 4001}).status_code == 422
+
+
+def test_quick_deck_parses_and_creates():
+    text = "hovedstaden i Norge = Oslo\n# kommentar\nfire pluss fire - 8\nH2O|vann\nDarlig linje uten separator\nsol;solen\n\n"
+    r = client.post("/api/study/decks/quick", json={"title": "Blandet", "text": text})
+    assert r.status_code == 201
+    body = r.json()
+    assert body["added"] == 4
+    cards = client.get(f"/api/study/decks/{body['deck_id']}/cards").json()
+    fronts = [c["front"] for c in cards]
+    assert "hovedstaden i Norge" in fronts and "H2O" in fronts and "sol" in fronts
+    assert all(c["back"] for c in cards)
+
+
+def test_quick_deck_append_and_errors():
+    r = client.post("/api/study/decks/quick", json={"title": "", "text": "a = b"})
+    did = r.json()["deck_id"]
+    r2 = client.post("/api/study/decks/quick", json={"text": "c = d", "deck_id": did})
+    assert r2.status_code == 201 and r2.json()["added"] == 1 and r2.json()["deck_id"] == did
+    assert client.post("/api/study/decks/quick", json={"text": "ingen separator her"}).status_code == 422
+    assert client.post("/api/study/decks/quick", json={"text": "x = y", "deck_id": 999999}).status_code == 404

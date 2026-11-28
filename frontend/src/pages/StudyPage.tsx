@@ -11,6 +11,12 @@ function Cards({ model }: { model: string }) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [text, setText] = useState(""); const [title, setTitle] = useState(""); const [n, setN] = useState(8);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [ok, setOk] = useState("");
+  const [qopen, setQopen] = useState(false); const [qtitle, setQtitle] = useState(""); const [qtext, setQtext] = useState(""); const [qbusy, setQbusy] = useState(false);
+  const quick = async () => {
+    setQbusy(true); setErr(""); setOk("");
+    try { const r = await studyApi.quick({ title: qtitle, text: qtext }); setOk(`${r.added} kort lagt i stokken.`); setQtext(""); setQtitle(""); load(); }
+    catch (e) { setErr(clean(e)); } finally { setQbusy(false); }
+  };
   const [quiz, setQuiz] = useState<{ deck: Deck; qs: { card_id: number; question: string; options: string[]; answer: number }[]; i: number; pick: number | null; right: number } | null>(null);
   const startQuiz = async (d: Deck) => {
     try { const qs = await studyApi.quiz(d.id); setErr(""); setOk(""); setQuiz({ deck: d, qs, i: 0, pick: null, right: 0 }); } catch (e) { setErr(clean(e)); }
@@ -112,6 +118,14 @@ function Cards({ model }: { model: string }) {
         {!model && <div className="mt-2 text-xs text-white/65">Velg eller last ned en modell først.</div>}
         {err && <div className="mt-2 text-sm text-rose-300">{err}</div>}
         {ok && <div className="mt-2 text-sm text-emerald-300">{ok}</div>}
+        <button className="mt-3 text-xs text-white/60 underline" onClick={() => setQopen(!qopen)}>{qopen ? "Skjul hurtigkort" : "Har du fasit? Lim inn ferdige par uten modell"}</button>
+        {qopen && (
+          <div className="animate-rise mt-2 border-t border-white/10 pt-3">
+            <div className="text-xs text-white/60">Én linje per kort, f.eks. «hovedstaden i Norge = Oslo». Virker også med - | eller ;</div>
+            <input className={`${field} mt-2 w-full`} placeholder="Navn på stokken (valgfritt)" value={qtitle} maxLength={100} onChange={(e) => setQtitle(e.target.value)} />
+            <textarea className={`${field} mt-2 h-28 w-full resize-none`} placeholder={"hovedstaden i Norge = Oslo\n4 x 4 = 16"} value={qtext} onChange={(e) => setQtext(e.target.value)} />
+            <button className="btn-primary mt-2 flex items-center gap-1.5" disabled={qbusy || !qtext.trim()} onClick={quick}>{qbusy ? <Loader2 size={15} className="animate-spin" /> : <Layers size={15} />}{qbusy ? "Lager…" : "Lag hurtigkort"}</button>
+          </div>)}
       </div>
       <div className="space-y-2">
         {decks.length === 0 && <div className="glass-soft rounded-3xl p-8 text-center text-sm text-white/60">Ingen stokker ennå. Lag den første til venstre.</div>}
