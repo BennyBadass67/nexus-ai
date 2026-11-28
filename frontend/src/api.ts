@@ -270,9 +270,13 @@ export type Today = { date: string; tasks_open: number; tasks_overdue: Note[]; t
 export const todayApi = { get: () => { const d = new Date(); const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; return j<Today>("/api/today?date=" + ds); } };
 
 export type StudyStats = { today: number; streak: number; last7: { day: string; n: number }[]; total: number; good_pct_7d: number | null };
+export type Exam = { id: number; subject: string; date: string; days_left: number };
 const localDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 export const schoolApi = {
   stats: () => j<StudyStats>("/api/study/stats?date=" + localDay()),
   plan: (b: { topics: string[]; exam_date: string; subject?: string; commit?: boolean }) =>
     j<{ items: { due: string; text: string }[]; added: number }>("/api/study/plan", { method: "POST", headers: J, body: JSON.stringify({ ...b, start_date: localDay() }) }),
+  exams: () => j<{ exams: Exam[] }>("/api/school/exams?date=" + localDay()),
+  addExam: (subject: string, date: string) => j<Exam>("/api/school/exams", { method: "POST", headers: J, body: JSON.stringify({ subject, date }) }),
+  delExam: (id: number) => j<{ ok: boolean }>("/api/school/exams/" + id, { method: "DELETE" }),
 };

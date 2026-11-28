@@ -1,5 +1,5 @@
 import CountUp from "../components/CountUp";
-import { SysMonCard, NotesCard, StudyCard, TodayCard, FocusCard } from "../components/HomeWidgets";
+import { SysMonCard, NotesCard, StudyCard, TodayCard, FocusCard, ExamsCard } from "../components/HomeWidgets";
 import { useEffect, useState } from "react";
 import { MessageSquare, Cpu, Database, ArrowUpRight, Download, Zap, Brain, Users, Boxes, FolderOpen, Activity, Plus } from "lucide-react";
 import { api, Conv, memApi } from "../api";
@@ -92,7 +92,7 @@ export default function HomePage({ go }: { go: (p: string) => void }) {
       <TodayCard go={go} />
       <div className="grid gap-4 md:grid-cols-2"><SysMonCard /><NotesCard go={() => go("notes")} /></div>
       <FocusCard />
-      <StudyCard go={() => go("study")} />
+      <div className="grid gap-4 md:grid-cols-2"><StudyCard go={() => go("study")} /><ExamsCard /></div>
       <div className="grid gap-3 pb-2 md:grid-cols-2 xl:grid-cols-3">
         {quick.map(([I, t, d, to], i) => (
           <button key={t} onClick={() => go(to)} className="glass-soft animate-rise flex items-center gap-3 rounded-full py-2.5 pl-2.5 pr-5 text-left transition hover:brightness-105 active:scale-[.98]" style={{ animationDelay: `${300 + i * 40}ms` }}>

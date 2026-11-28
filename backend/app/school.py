@@ -122,3 +122,53 @@ def weak_quiz(n: int = 10):
         qs.append({"card_id": r["id"], "question": r["front"], "options": opts, "answer": opts.index(r["back"]),
                    "deck": r["deck"], "lapses": r["lapses"] or 0})
     return qs
+
+
+# v2.5.0: Eksamensnedtelling - lagre prover og se hvor mange dager det er igjen.
+with db.conn() as _c:
+    _c.executescript("""CREATE TABLE IF NOT EXISTS exams (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, exam_date TEXT NOT NULL, created_at REAL NOT NULL);""")
+
+
+class ExamIn(BaseModel):
+    subject: str = Field(min_length=1, max_length=60)
+    date: str
+
+
+def _exam_row(r, today: _date) -> dict:
+    d = _d(r["exam_date"])
+    return {"id": r["id"], "subject": r["subject"], "date": r["exam_date"], "days_left": (d - today).days}
+
+
+@router.get("/api/school/exams")
+def list_exams(date: str | None = None):
+    """Alle prover, naermest forst. days_left er negativ for prover som har vaert."""
+    today = _d(date) if date and DATE_RE.fullmatch(date) else _d(local_day())
+    with db.conn() as c:
+        rows = c.execute("SELECT id, subject, exam_date FROM exams ORDER BY exam_date").fetchall()
+    return {"exams": [_exam_row(r, today) for r in rows]}
+
+
+@router.post("/api/school/exams", status_code=201)
+def add_exam(b: ExamIn):
+    if not DATE_RE.fullmatch(b.date):
+        raise HTTPException(422, "Dato maa vaere paa formen AAAA-MM-DD.")
+    try:
+        _d(b.date)
+    except ValueError:
+        raise HTTPException(422, "Datoen finnes ikke.")
+    import time
+    with db.conn() as c:
+        dup = c.execute("SELECT id FROM exams WHERE lower(subject)=lower(?) AND exam_date=?", (b.subject.strip(), b.date)).fetchone()
+        if dup:
+            raise HTTPException(409, "Denne proven er allerede lagt inn.")
+        eid = c.execute("INSERT INTO exams(subject,exam_date,created_at) VALUES(?,?,?)", (b.subject.strip(), b.date, time.time())).lastrowid
+    return {"id": eid, "subject": b.subject.strip(), "date": b.date}
+
+
+@router.delete("/api/school/exams/{eid}")
+def del_exam(eid: int):
+    with db.conn() as c:
+        cur = c.execute("DELETE FROM exams WHERE id=?", (eid,))
+    if cur.rowcount == 0:
+        raise HTTPException(404, "Proven finnes ikke")
+    return {"ok": True}

@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "2.4.1: Oppdateringen fikset (installeren drepes ikke lenger midt i, tydelige feil, sjekk etter omstart)."
+          releaseBody: "2.5.0: Prøvenedtelling på Hjem - legg inn prøver og se dagene igjen."
           releaseDraft: false
           prerelease: false

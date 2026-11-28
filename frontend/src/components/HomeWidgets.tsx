@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Cpu, MemoryStick, StickyNote, Check, Plus, Timer } from "lucide-react";
+import { Cpu, Hourglass, MemoryStick, StickyNote, Check, Plus, Timer, Trash2 } from "lucide-react";
 import { GraduationCap } from "lucide-react";
-import { Deck, extrasApi, Note, studyApi, SysMon, Today, todayApi } from "../api";
+import { Deck, Exam, extrasApi, Note, schoolApi, studyApi, SysMon, Today, todayApi } from "../api";
 import { CalendarCheck, Cloud, MessageSquare } from "lucide-react";
 
 const Bar = ({ pct, label, sub }: { pct: number | null; label: string; sub?: string }) => (
@@ -128,5 +128,46 @@ export function FocusCard() {
         <button className="btn" onClick={() => setS({ ...s, end: null, left: total })}>Nullstill</button>
         <button className="btn" onClick={() => { const n = s.mode === "focus" ? "break" : "focus"; setS({ ...s, mode: n, end: null, left: LEN[n] }); }}>{s.mode === "focus" ? "Hopp til pause" : "Hopp til fokus"}</button>
       </div>
+    </div>);
+}
+
+export function ExamsCard() {
+  const [exams, setExams] = useState<Exam[] | null>(null);
+  const [subj, setSubj] = useState(""); const [date, setDate] = useState(""); const [err, setErr] = useState("");
+  const load = () => schoolApi.exams().then((r) => setExams(r.exams)).catch(() => setExams([]));
+  useEffect(() => { load(); }, []);
+  const add = () => {
+    if (!subj.trim() || !date) return;
+    schoolApi.addExam(subj.trim(), date).then(() => { setSubj(""); setDate(""); setErr(""); load(); })
+      .catch((e) => { try { setErr(JSON.parse(String(e.message).replace(/^\d+ /, ""))?.detail || "Kunne ikke lagre."); } catch { setErr("Kunne ikke lagre."); } });
+  };
+  const fmt = (iso: string) => { const [y, m, d] = iso.split("-"); return `${Number(d)}. ${["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"][Number(m) - 1]} ${y}`; };
+  const when = (n: number) => n === 0 ? "i dag!" : n === 1 ? "i morgen" : n < 0 ? `for ${-n} d siden` : `om ${n} dager`;
+  if (!exams) return null;
+  const upcoming = exams.filter((e) => e.days_left >= 0);
+  const next = upcoming[0];
+  return (
+    <div className="glass animate-rise rounded-[26px] p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold"><Hourglass size={15} />Prøvenedtelling<span className="ml-auto text-xs font-normal text-white/60">{upcoming.length ? `${upcoming.length} kommende` : "ingen planlagt"}</span></div>
+      {next && (
+        <div className="mt-3 flex items-end gap-3">
+          <div className="text-4xl font-semibold tabular-nums">{next.days_left === 0 ? "I dag" : next.days_left}</div>
+          <div className="pb-1 text-xs text-white/65">{next.days_left === 0 ? `${next.subject} er i dag. Lykke til!` : next.days_left === 1 ? `dag til ${next.subject}` : `dager til ${next.subject} (${fmt(next.date)})`}</div>
+        </div>)}
+      <div className="mt-3 space-y-1.5">
+        {exams.slice(next ? 1 : 0, 4).map((e) => (
+          <div key={e.id} className={`flex items-center gap-2.5 text-sm ${e.days_left < 0 ? "text-white/40" : ""}`}>
+            <span className="truncate">{e.subject}</span>
+            <span className="ml-auto flex-none text-xs text-white/55">{fmt(e.date)} · {when(e.days_left)}</span>
+            <button title="Fjern" className="flex-none text-white/40 transition hover:text-rose-600" onClick={() => schoolApi.delExam(e.id).then(load)}><Trash2 size={13} /></button>
+          </div>))}
+        {exams.length === 0 && <div className="text-xs text-white/60">Legg inn neste prøve, så teller NEXUS ned for deg.</div>}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <input value={subj} onChange={(e) => setSubj(e.target.value)} maxLength={60} placeholder="Fag, f.eks. Matte" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-nx-blue/60" />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none [color-scheme:dark] focus:border-nx-blue/60" />
+        <button className="btn-primary !px-3" onClick={add} disabled={!subj.trim() || !date} title="Legg til"><Plus size={15} /></button>
+      </div>
+      {err && <div className="mt-2 text-xs text-rose-700">{err}</div>}
     </div>);
 }

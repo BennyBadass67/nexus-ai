@@ -66,3 +66,34 @@ def test_plan_endpoint_preview_commit_and_errors():
     assert client.post("/api/study/plan", json={**body, "exam_date": "2031-05-01"}).status_code == 422
     assert client.post("/api/study/plan", json={**body, "exam_date": "i morgen"}).status_code == 422
     assert client.post("/api/study/plan", json={"topics": [], "exam_date": "2031-06-10"}).status_code == 422
+
+
+def test_exams_crud_days_left_and_sorting():
+    base = client.get("/api/school/exams?date=2026-12-01").json()["exams"]
+    n0 = len(base)
+    r = client.post("/api/school/exams", json={"subject": "Matte", "date": "2026-12-10"})
+    assert r.status_code == 201 and r.json()["subject"] == "Matte"
+    eid = r.json()["id"]
+    client.post("/api/school/exams", json={"subject": "Norsk", "date": "2026-12-05"})
+    client.post("/api/school/exams", json={"subject": "Engelsk", "date": "2026-11-28"})
+    ex = client.get("/api/school/exams?date=2026-12-01").json()["exams"]
+    assert len(ex) == n0 + 3
+    new = {e["subject"]: e for e in ex if e["subject"] in ("Matte", "Norsk", "Engelsk")}
+    assert new["Matte"]["days_left"] == 9 and new["Norsk"]["days_left"] == 4 and new["Engelsk"]["days_left"] == -3
+    assert [e["date"] for e in ex] == sorted(e["date"] for e in ex)
+    r = client.delete(f"/api/school/exams/{eid}")
+    assert r.status_code == 200
+    assert client.get("/api/school/exams?date=2026-12-01").json()["exams"].__len__() == n0 + 2
+    assert client.delete(f"/api/school/exams/{eid}").status_code == 404
+
+
+def test_exams_validation():
+    assert client.post("/api/school/exams", json={"subject": "", "date": "2026-12-10"}).status_code == 422
+    assert client.post("/api/school/exams", json={"subject": "Matte", "date": "10.12.2026"}).status_code == 422
+    assert client.post("/api/school/exams", json={"subject": "Matte", "date": "2026-13-40"}).status_code == 422
+    r = client.post("/api/school/exams", json={"subject": "Kunst", "date": "2027-01-15"})
+    assert r.status_code == 201
+    dup = client.post("/api/school/exams", json={"subject": "kunst", "date": "2027-01-15"})
+    assert dup.status_code == 409
+    ex = client.get("/api/school/exams?date=2027-01-15").json()["exams"]
+    assert next(e for e in ex if e["subject"] == "Kunst")["days_left"] == 0
