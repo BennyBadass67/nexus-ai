@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "2.5.0: Prøvenedtelling på Hjem - legg inn prøver og se dagene igjen."
+          releaseBody: "2.6.0: Fokus-logg - fullførte fokusøkter telles: minutter i dag, denne uken og dagrekke."
           releaseDraft: false
           prerelease: false

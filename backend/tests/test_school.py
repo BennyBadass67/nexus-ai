@@ -97,3 +97,17 @@ def test_exams_validation():
     assert dup.status_code == 409
     ex = client.get("/api/school/exams?date=2027-01-15").json()["exams"]
     assert next(e for e in ex if e["subject"] == "Kunst")["days_left"] == 0
+
+
+def test_focus_log_and_stats():
+    base = client.get("/api/school/focus/stats").json()
+    r = client.post("/api/school/focus", json={"minutes": 25})
+    assert r.status_code == 201
+    client.post("/api/school/focus", json={"minutes": 25})
+    s = client.get("/api/school/focus/stats").json()
+    assert s["today_sessions"] == base["today_sessions"] + 2
+    assert s["today_min"] == base["today_min"] + 50
+    assert s["total_min"] == base["total_min"] + 50
+    assert s["streak"] >= 1 and len(s["last7"]) == 7
+    assert client.post("/api/school/focus", json={"minutes": 0}).status_code == 422
+    assert client.post("/api/school/focus", json={"minutes": 300}).status_code == 422

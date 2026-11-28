@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Cpu, Hourglass, MemoryStick, StickyNote, Check, Plus, Timer, Trash2 } from "lucide-react";
 import { GraduationCap } from "lucide-react";
-import { Deck, Exam, extrasApi, Note, schoolApi, studyApi, SysMon, Today, todayApi } from "../api";
+import { Deck, Exam, extrasApi, FocusStats, Note, schoolApi, studyApi, SysMon, Today, todayApi } from "../api";
 import { CalendarCheck, Cloud, MessageSquare } from "lucide-react";
 
 const Bar = ({ pct, label, sub }: { pct: number | null; label: string; sub?: string }) => (
@@ -105,13 +105,16 @@ const loadFocus = (): FocusState => {
 
 export function FocusCard() {
   const [s, setS] = useState<FocusState>(loadFocus);
+  const [stats, setStats] = useState<FocusStats | null>(null);
   const [, tick] = useState(0);
+  useEffect(() => { schoolApi.focusStats().then(setStats).catch(() => {}); }, []);
   useEffect(() => { localStorage.setItem(FOCUS_KEY, JSON.stringify(s)); }, [s]);
   useEffect(() => { if (s.end == null) return; const t = setInterval(() => tick((x) => x + 1), 500); return () => clearInterval(t); }, [s.end]);
   const left = s.end == null ? s.left : Math.max(0, Math.round((s.end - Date.now()) / 1000));
   useEffect(() => {
     if (s.end != null && left === 0) {
       const next = s.mode === "focus" ? "break" : "focus";
+      if (s.mode === "focus") schoolApi.logFocus(Math.round(LEN.focus / 60)).then(setStats).catch(() => {});
       setS({ mode: next, end: null, left: LEN[next], done: s.done + (s.mode === "focus" ? 1 : 0), day: day() });
     }
   }, [left, s]);
@@ -120,7 +123,7 @@ export function FocusCard() {
   const running = s.end != null;
   return (
     <div className="glass animate-rise rounded-[26px] p-5">
-      <div className="flex items-center gap-2 text-sm font-semibold"><Timer size={15} />Fokus<span className="ml-auto text-xs font-normal text-white/60">{s.done} økt{s.done === 1 ? "" : "er"} i dag</span></div>
+      <div className="flex items-center gap-2 text-sm font-semibold"><Timer size={15} />Fokus<span className="ml-auto text-xs font-normal text-white/60">{stats ? `${stats.today_min} min i dag · ${stats.week_min} min denne uken${stats.streak > 1 ? ` · rekke ${stats.streak} dager` : ""}` : `${s.done} økt${s.done === 1 ? "" : "er"} i dag`}</span></div>
       <div className="mt-3 flex items-end gap-3"><div className="text-4xl font-semibold tabular-nums">{mm}:{ss}</div><div className="pb-1 text-xs text-white/65">{s.mode === "focus" ? "lekser/arbeid (25 min)" : "pause (5 min)"}</div></div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="sysbar h-full transition-all duration-700" style={{ width: pct + "%" }} /></div>
       <div className="mt-3 flex gap-2">

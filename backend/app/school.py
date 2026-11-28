@@ -172,3 +172,41 @@ def del_exam(eid: int):
     if cur.rowcount == 0:
         raise HTTPException(404, "Proven finnes ikke")
     return {"ok": True}
+
+
+# v2.6.0: Fokus-logg - fullforte fokusokter lagres, med statistikk (dag, uke, rekke).
+with db.conn() as _c:
+    _c.executescript("""CREATE TABLE IF NOT EXISTS focuslog (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, day TEXT NOT NULL, minutes INTEGER NOT NULL);
+                        CREATE INDEX IF NOT EXISTS focuslog_day ON focuslog(day);""")
+
+
+class FocusIn(BaseModel):
+    minutes: int = Field(ge=1, le=180)
+
+
+def focus_stats(today: str) -> dict:
+    with db.conn() as c:
+        rows = c.execute("SELECT day, COUNT(*) AS n, SUM(minutes) AS m FROM focuslog GROUP BY day").fetchall()
+    per = {r["day"]: (r["n"], r["m"] or 0) for r in rows}
+    t = _d(today)
+    streak, d = 0, t if today in per else t - timedelta(days=1)
+    while d.strftime("%Y-%m-%d") in per:
+        streak += 1; d -= timedelta(days=1)
+    last7 = [{"day": (t - timedelta(days=i)).strftime("%Y-%m-%d"), "min": per.get((t - timedelta(days=i)).strftime("%Y-%m-%d"), (0, 0))[1]} for i in range(6, -1, -1)]
+    tn, tm = per.get(today, (0, 0))
+    return {"today_sessions": tn, "today_min": tm, "streak": streak, "last7": last7,
+            "week_min": sum(x["min"] for x in last7), "total_sessions": sum(v[0] for v in per.values()), "total_min": sum(v[1] for v in per.values())}
+
+
+@router.post("/api/school/focus", status_code=201)
+def log_focus(b: FocusIn):
+    import time
+    with db.conn() as c:
+        c.execute("INSERT INTO focuslog(ts,day,minutes) VALUES(?,?,?)", (time.time(), local_day(), b.minutes))
+    return focus_stats(local_day())
+
+
+@router.get("/api/school/focus/stats")
+def get_focus_stats(date: str | None = None):
+    today = date if date and DATE_RE.fullmatch(date) else local_day()
+    return focus_stats(today)
