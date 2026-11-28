@@ -42,6 +42,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "NEXUS AI ${{ github.ref_name }}"
-          releaseBody: "2.6.0: Fokus-logg - fullførte fokusøkter telles: minutter i dag, denne uken og dagrekke."
+          releaseBody: "2.7.0: Hurtigkort (lim inn ferdige par, ingen modell nødvendig) og ukemål for fokus med fremdriftslinje."
           releaseDraft: false
           prerelease: false
